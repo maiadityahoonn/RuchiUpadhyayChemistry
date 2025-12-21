@@ -120,6 +120,11 @@ export const useCourses = () => {
     return enrollment?.progress ?? 0;
   };
 
+  const getCompletedAt = (courseId: string): Date | null => {
+    const enrollment = enrolledCourses.find(c => c.course_id === courseId);
+    return enrollment?.completed_at ? new Date(enrollment.completed_at) : null;
+  };
+
   return {
     enrolledCourses,
     loading,
@@ -127,6 +132,7 @@ export const useCourses = () => {
     updateProgress,
     isEnrolled,
     getProgress,
+    getCompletedAt,
     refetch: fetchEnrolledCourses,
   };
 };
