@@ -10,6 +10,7 @@ import CategoryGrid from '@/components/home/CategoryGrid';
 import WhyChooseUs from '@/components/home/WhyChooseUs';
 import TestimonialsSection from '@/components/home/TestimonialsSection';
 import ContactSection from '@/components/home/ContactSection';
+import FAQSection from '@/components/home/FAQSection';
 import CourseCard from '@/components/courses/CourseCard';
 import { Button } from '@/components/ui/button';
 import { mockCourses, mockBadges } from '@/data/mockData';
@@ -159,6 +160,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* FAQ Section */}
+      <FAQSection />
 
       {/* Contact Section */}
       <ContactSection />

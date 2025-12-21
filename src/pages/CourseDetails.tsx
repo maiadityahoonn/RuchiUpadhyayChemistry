@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import CourseFAQ from '@/components/courses/CourseFAQ';
 import { useCourses } from '@/hooks/useCourses';
 import { useCoursesList } from '@/hooks/useAdmin';
 import { useAuth } from '@/contexts/AuthContext';
@@ -441,6 +442,9 @@ const CourseDetails = () => {
             </div>
           </div>
         </section>
+
+        {/* Course FAQ */}
+        <CourseFAQ courseTitle={course.title} />
       </main>
 
       <Footer />
