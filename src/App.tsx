@@ -18,6 +18,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import Login from "./pages/Login";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
+import PurchaseHistory from "./pages/PurchaseHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/notes" element={<Notes />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/purchases" element={<PurchaseHistory />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/contact" element={<Contact />} />
