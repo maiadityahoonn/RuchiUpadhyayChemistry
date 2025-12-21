@@ -1,3 +1,11 @@
+export type CourseCategory = 
+  | 'Class 10'
+  | 'Class 12'
+  | 'IIT-JEE'
+  | 'NEET'
+  | 'Engineering Chemistry'
+  | 'Environmental Science';
+
 export interface Course {
   id: string;
   title: string;
@@ -6,7 +14,7 @@ export interface Course {
   price: number;
   originalPrice?: number;
   image: string;
-  category: string;
+  category: CourseCategory;
   duration: string;
   lessons: number;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
@@ -64,4 +72,14 @@ export interface LeaderboardEntry {
   user: User;
   xp: number;
   change: number;
+}
+
+export interface CategoryInfo {
+  id: string;
+  name: CourseCategory;
+  slug: string;
+  description: string;
+  icon: string;
+  color: string;
+  gradient: string;
 }

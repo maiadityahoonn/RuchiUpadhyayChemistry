@@ -1,56 +1,32 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Users, BookOpen, Trophy, Star, Zap, Target, Award, TrendingUp, Play } from 'lucide-react';
+import { ArrowRight, Users, BookOpen, Trophy, Star, Award, Play } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import HeroCarousel from '@/components/home/HeroCarousel';
+import CategoryGrid from '@/components/home/CategoryGrid';
 import CourseCard from '@/components/courses/CourseCard';
 import { Button } from '@/components/ui/button';
 import { mockCourses, mockBadges } from '@/data/mockData';
+import banner1 from '@/assets/banner1.png';
 
 const Index = () => {
   const featuredCourses = mockCourses.slice(0, 3);
 
   const stats = [
-    { icon: Users, label: 'Active Learners', value: '100K+', color: 'text-primary' },
-    { icon: BookOpen, label: 'Total Courses', value: '500+', color: 'text-accent' },
-    { icon: Trophy, label: 'Badges Earned', value: '1M+', color: 'text-success' },
+    { icon: Users, label: 'Chemistry Students', value: '50K+', color: 'text-primary' },
+    { icon: BookOpen, label: 'Video Lectures', value: '1000+', color: 'text-accent' },
+    { icon: Trophy, label: 'Questions Solved', value: '500K+', color: 'text-success' },
     { icon: Star, label: 'Average Rating', value: '4.9', color: 'text-warning' },
-  ];
-
-  const features = [
-    {
-      icon: Zap,
-      title: 'Earn XP & Level Up',
-      description: 'Gain experience points as you learn. Watch your level grow with every completed lesson.',
-      gradient: 'from-primary to-primary/50',
-    },
-    {
-      icon: Trophy,
-      title: 'Unlock Achievements',
-      description: 'Collect badges and achievements as you reach milestones in your learning journey.',
-      gradient: 'from-accent to-accent/50',
-    },
-    {
-      icon: Target,
-      title: 'Daily Challenges',
-      description: 'Complete daily challenges to maintain your streak and earn bonus rewards.',
-      gradient: 'from-success to-success/50',
-    },
-    {
-      icon: TrendingUp,
-      title: 'Compete & Climb',
-      description: 'Compete with fellow learners and climb the leaderboard to showcase your skills.',
-      gradient: 'from-warning to-warning/50',
-    },
   ];
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      {/* Hero Section */}
-      <HeroCarousel />
+      {/* Hero Banner */}
+      <section className="pt-16 md:pt-20">
+        <img src={banner1} alt="Ruchi Upadhyay Chemistry Classes" className="w-full h-auto" />
+      </section>
 
       {/* Stats Section */}
       <section className="py-16 bg-secondary/30">
@@ -78,6 +54,9 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Category Grid */}
+      <CategoryGrid />
+
       {/* Featured Courses */}
       <section className="py-20">
         <div className="container mx-auto px-4">
@@ -92,7 +71,7 @@ const Index = () => {
               Featured Courses
             </span>
             <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">
-              Start Your Learning Journey
+              Start Your Chemistry Journey
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Choose from our most popular courses and start earning XP today
@@ -121,55 +100,8 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Gamification Features */}
-      <section className="py-20 bg-gradient-to-b from-secondary/30 to-background">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-medium mb-4">
-              <Trophy className="w-4 h-4" />
-              Gamified Learning
-            </span>
-            <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">
-              Learn, Play, Win!
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Our gamification system makes learning fun and rewarding
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
-                className="bg-card rounded-2xl p-6 border border-border hover:border-primary/30 transition-all duration-300 hover:shadow-xl"
-              >
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4`}>
-                  <feature.icon className="w-6 h-6 text-primary-foreground" />
-                </div>
-                <h3 className="font-heading font-semibold text-lg text-card-foreground mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  {feature.description}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Badges Showcase */}
-      <section className="py-20">
+      <section className="py-20 bg-secondary/30">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -223,16 +155,18 @@ const Index = () => {
             className="text-center space-y-8"
           >
             <h2 className="text-3xl md:text-5xl font-heading font-bold text-background">
-              Ready to Start Your Journey?
+              Ready to Master Chemistry?
             </h2>
             <p className="text-xl text-background/80 max-w-2xl mx-auto">
-              Join thousands of learners who are already transforming their careers with EduTech
+              Join thousands of students who are acing their exams with Ruchi Upadhyay Chemistry Classes
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Button variant="hero" size="xl">
-                Get Started Free
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+              <Link to="/courses">
+                <Button variant="hero" size="xl">
+                  Get Started Free
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
               <Button 
                 variant="outline" 
                 size="xl"
