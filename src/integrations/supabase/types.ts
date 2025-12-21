@@ -101,6 +101,36 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -108,6 +138,9 @@ export type Database = {
           id: string
           last_activity_date: string | null
           level: number
+          referral_code: string | null
+          referred_by: string | null
+          reward_points: number
           streak: number
           updated_at: string
           user_id: string
@@ -120,6 +153,9 @@ export type Database = {
           id?: string
           last_activity_date?: string | null
           level?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          reward_points?: number
           streak?: number
           updated_at?: string
           user_id: string
@@ -132,11 +168,47 @@ export type Database = {
           id?: string
           last_activity_date?: string | null
           level?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          reward_points?: number
           streak?: number
           updated_at?: string
           user_id?: string
           username?: string | null
           xp?: number
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          points_earned: number
+          referral_code: string
+          referred_user_id: string | null
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          points_earned?: number
+          referral_code: string
+          referred_user_id?: string | null
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          points_earned?: number
+          referral_code?: string
+          referred_user_id?: string | null
+          referrer_id?: string
+          status?: string
         }
         Relationships: []
       }
@@ -277,6 +349,39 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          dark_mode: boolean
+          email_notifications: boolean
+          id: string
+          language: string
+          push_notifications: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dark_mode?: boolean
+          email_notifications?: boolean
+          id?: string
+          language?: string
+          push_notifications?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dark_mode?: boolean
+          email_notifications?: boolean
+          id?: string
+          language?: string
+          push_notifications?: boolean
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

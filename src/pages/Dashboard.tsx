@@ -2,12 +2,16 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, Clock, Play, CheckCircle, Award, 
-  Calendar, Bell, Settings, LogOut, ChevronRight,
+  Calendar, LogOut, ChevronRight,
   Target, TrendingUp, Loader2, BookMarked, LayoutDashboard
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import GamificationStats from '@/components/gamification/GamificationStats';
+import NotificationDropdown from '@/components/dashboard/NotificationDropdown';
+import SettingsModal from '@/components/dashboard/SettingsModal';
+import ReferralCard from '@/components/dashboard/ReferralCard';
+import PointsDiscountCard from '@/components/dashboard/PointsDiscountCard';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { mockCourses } from '@/data/mockData';
@@ -54,6 +58,32 @@ const Dashboard = () => {
     };
 
     fetchTestResults();
+  }, [user]);
+
+  // Realtime subscription for test results
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('test-results-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'test_results',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newResult = payload.new as TestResult;
+          setTestResults(prev => [newResult, ...prev.slice(0, 4)]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Redirect to login if not authenticated
@@ -125,12 +155,8 @@ const Dashboard = () => {
                 </div>
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" size="icon">
-                  <Bell className="w-5 h-5" />
-                </Button>
-                <Button variant="outline" size="icon">
-                  <Settings className="w-5 h-5" />
-                </Button>
+                <NotificationDropdown />
+                <SettingsModal />
               </div>
             </motion.div>
           </div>
@@ -232,6 +258,12 @@ const Dashboard = () => {
 
               {/* Sidebar */}
               <div className="space-y-6">
+                {/* Referral Card */}
+                <ReferralCard />
+
+                {/* Points & Discount Card */}
+                <PointsDiscountCard />
+
                 {/* Daily Goal */}
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
