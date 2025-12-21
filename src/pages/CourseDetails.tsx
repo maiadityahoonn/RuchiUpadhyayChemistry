@@ -18,10 +18,12 @@ import CourseFAQ from '@/components/courses/CourseFAQ';
 import CheckoutModal from '@/components/checkout/CheckoutModal';
 import CourseCertificate from '@/components/certificate/CourseCertificate';
 import { useCourses } from '@/hooks/useCourses';
+import { useLessonProgress } from '@/hooks/useLessonProgress';
 import { useCoursesList } from '@/hooks/useAdmin';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReferrals } from '@/hooks/useReferrals';
 import { mockCourses } from '@/data/mockData';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const POINTS_PER_RUPEE = 10;
 
@@ -133,6 +135,17 @@ const CourseDetails = () => {
     },
   ];
 
+  // Calculate total lessons from curriculum
+  const totalLessons = curriculum.reduce((acc, section) => acc + section.lessons.length, 0);
+  
+  // Use lesson progress hook
+  const { 
+    isLessonCompleted, 
+    toggleLessonComplete, 
+    completedCount,
+    progressPercent: lessonProgressPercent 
+  } = useLessonProgress(course.id, totalLessons);
+
   const features = [
     { icon: Video, label: `${course.lessons} Video Lessons` },
     { icon: FileText, label: 'Downloadable Resources' },
@@ -234,17 +247,20 @@ const CourseDetails = () => {
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Your Progress</span>
-                            <span className="font-semibold text-primary">{progress}%</span>
+                            <span className="font-semibold text-primary">{lessonProgressPercent}%</span>
                           </div>
-                          <Progress value={progress} className="h-3" />
+                          <Progress value={lessonProgressPercent} className="h-3" />
+                          <p className="text-xs text-muted-foreground text-center">
+                            {completedCount} of {totalLessons} lessons completed
+                          </p>
                         </div>
                         
                         <Button variant="gradient" size="lg" className="w-full">
                           <Play className="w-5 h-5 mr-2" />
-                          {progress > 0 ? 'Continue Learning' : 'Start Course'}
+                          {lessonProgressPercent > 0 ? 'Continue Learning' : 'Start Course'}
                         </Button>
                         
-                        {progress === 100 ? (
+                        {lessonProgressPercent === 100 ? (
                           <div className="space-y-3">
                             <p className="text-sm text-center text-success font-medium">
                               🎉 Congratulations! Course completed!
@@ -259,7 +275,7 @@ const CourseDetails = () => {
                           </div>
                         ) : (
                           <p className="text-sm text-center text-muted-foreground">
-                            {course.lessons - Math.floor(course.lessons * progress / 100)} lessons remaining
+                            {totalLessons - completedCount} lessons remaining
                           </p>
                         )}
                       </>
@@ -373,21 +389,42 @@ const CourseDetails = () => {
                         </AccordionTrigger>
                         <AccordionContent className="pb-4">
                           <div className="space-y-2 ml-14">
-                            {section.lessons.map((lesson, lIndex) => (
-                              <div 
-                                key={lIndex}
-                                className="flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-3">
-                                  {lesson.type === 'video' && <Video className="w-4 h-4 text-primary" />}
-                                  {lesson.type === 'quiz' && <Target className="w-4 h-4 text-accent" />}
-                                  {lesson.type === 'reading' && <FileText className="w-4 h-4 text-success" />}
-                                  {lesson.type === 'certificate' && <Award className="w-4 h-4 text-warning" />}
-                                  <span className="text-sm text-foreground">{lesson.title}</span>
+                            {section.lessons.map((lesson, lIndex) => {
+                              const lessonCompleted = isLessonCompleted(sIndex, lIndex);
+                              return (
+                                <div 
+                                  key={lIndex}
+                                  className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                                    lessonCompleted 
+                                      ? 'bg-success/10 border border-success/20' 
+                                      : 'hover:bg-secondary/50'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    {enrolled && (
+                                      <Checkbox
+                                        checked={lessonCompleted}
+                                        onCheckedChange={() => toggleLessonComplete(sIndex, lIndex)}
+                                        className="data-[state=checked]:bg-success data-[state=checked]:border-success"
+                                      />
+                                    )}
+                                    {lesson.type === 'video' && <Video className={`w-4 h-4 ${lessonCompleted ? 'text-success' : 'text-primary'}`} />}
+                                    {lesson.type === 'quiz' && <Target className={`w-4 h-4 ${lessonCompleted ? 'text-success' : 'text-accent'}`} />}
+                                    {lesson.type === 'reading' && <FileText className={`w-4 h-4 ${lessonCompleted ? 'text-success' : 'text-success'}`} />}
+                                    {lesson.type === 'certificate' && <Award className={`w-4 h-4 ${lessonCompleted ? 'text-success' : 'text-warning'}`} />}
+                                    <span className={`text-sm ${lessonCompleted ? 'text-success line-through' : 'text-foreground'}`}>
+                                      {lesson.title}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {lessonCompleted && (
+                                      <CheckCircle className="w-4 h-4 text-success" />
+                                    )}
+                                    <span className="text-xs text-muted-foreground">{lesson.duration}</span>
+                                  </div>
                                 </div>
-                                <span className="text-xs text-muted-foreground">{lesson.duration}</span>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </AccordionContent>
                       </AccordionItem>
