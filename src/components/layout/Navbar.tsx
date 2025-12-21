@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Menu, X, BookOpen, Trophy, User, LogIn, 
-  Flame, Zap, ChevronDown, LayoutDashboard 
+  Flame, Zap, ChevronDown, LayoutDashboard, LogOut 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navLinks = [
   { name: 'Home', path: '/' },
@@ -18,6 +19,8 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,6 +29,11 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <motion.nav
@@ -72,37 +80,46 @@ const Navbar = () => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-4">
-            {/* Streak Badge */}
-            <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/10 text-accent">
-              <Flame className="w-4 h-4" />
-              <span className="text-sm font-semibold">7</span>
-            </div>
+            {user ? (
+              <>
+                {/* Streak Badge */}
+                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/10 text-accent">
+                  <Flame className="w-4 h-4" />
+                  <span className="text-sm font-semibold">{profile?.streak ?? 0}</span>
+                </div>
 
-            {/* XP Badge */}
-            <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary">
-              <Zap className="w-4 h-4" />
-              <span className="text-sm font-semibold">2,450</span>
-            </div>
+                {/* XP Badge */}
+                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary">
+                  <Zap className="w-4 h-4" />
+                  <span className="text-sm font-semibold">{profile?.xp?.toLocaleString() ?? 0}</span>
+                </div>
 
-            <Link to="/dashboard">
-              <Button variant="ghost" size="sm">
-                <LayoutDashboard className="w-4 h-4 mr-2" />
-                Dashboard
-              </Button>
-            </Link>
+                <Link to="/dashboard">
+                  <Button variant="ghost" size="sm">
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </Button>
+                </Link>
 
-            <Link to="/admin">
-              <Button variant="outline" size="sm">
-                Admin
-              </Button>
-            </Link>
+                <Link to="/admin">
+                  <Button variant="outline" size="sm">
+                    Admin
+                  </Button>
+                </Link>
 
-            <Link to="/login">
-              <Button variant="gradient" size="sm">
-                <LogIn className="w-4 h-4 mr-2" />
-                Sign In
-              </Button>
-            </Link>
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Link to="/login">
+                <Button variant="gradient" size="sm">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -139,23 +156,39 @@ const Navbar = () => {
                   </Link>
                 ))}
                 <div className="pt-4 space-y-2">
-                  <Link to="/dashboard" onClick={() => setIsOpen(false)}>
-                    <Button variant="secondary" className="w-full justify-start">
-                      <LayoutDashboard className="w-4 h-4 mr-2" />
-                      Dashboard
-                    </Button>
-                  </Link>
-                  <Link to="/admin" onClick={() => setIsOpen(false)}>
-                    <Button variant="outline" className="w-full justify-start">
-                      Admin Panel
-                    </Button>
-                  </Link>
-                  <Link to="/login" onClick={() => setIsOpen(false)}>
-                    <Button variant="gradient" className="w-full justify-start">
-                      <LogIn className="w-4 h-4 mr-2" />
-                      Sign In
-                    </Button>
-                  </Link>
+                  {user ? (
+                    <>
+                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
+                        <Button variant="secondary" className="w-full justify-start">
+                          <LayoutDashboard className="w-4 h-4 mr-2" />
+                          Dashboard
+                        </Button>
+                      </Link>
+                      <Link to="/admin" onClick={() => setIsOpen(false)}>
+                        <Button variant="outline" className="w-full justify-start">
+                          Admin Panel
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start" 
+                        onClick={() => {
+                          setIsOpen(false);
+                          handleSignOut();
+                        }}
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Sign Out
+                      </Button>
+                    </>
+                  ) : (
+                    <Link to="/login" onClick={() => setIsOpen(false)}>
+                      <Button variant="gradient" className="w-full justify-start">
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Sign In
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </div>
             </motion.div>
