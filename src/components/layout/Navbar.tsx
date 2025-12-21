@@ -62,8 +62,9 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img src={ruchiLogo} alt="Ruchi Upadhyay Chemistry" className="h-10 w-auto" />
-            <span className={`text-lg font-heading font-bold hidden sm:block ${scrolled ? 'text-foreground' : 'text-background'}`}>
-              Ruchi <span className="text-primary">Chemistry</span>
+            <span className="text-lg font-heading font-bold hidden sm:block">
+              <span className={scrolled ? 'text-foreground' : 'text-white'}>Ruchi</span>{' '}
+              <span className="text-primary">Chemistry</span>
             </span>
           </Link>
 
@@ -76,7 +77,7 @@ const Navbar = () => {
                 className={`relative text-sm font-medium transition-colors hover:text-primary ${
                   location.pathname === link.path
                     ? 'text-primary'
-                    : scrolled ? 'text-muted-foreground' : 'text-background/80'
+                    : scrolled ? 'text-muted-foreground' : 'text-white/80'
                 }`}
               >
                 {link.name}
@@ -97,7 +98,7 @@ const Navbar = () => {
                 className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary ${
                   location.pathname.startsWith('/courses/') && location.pathname !== '/courses'
                     ? 'text-primary'
-                    : scrolled ? 'text-muted-foreground' : 'text-background/80'
+                    : scrolled ? 'text-muted-foreground' : 'text-white/80'
                 }`}
               >
                 Categories
