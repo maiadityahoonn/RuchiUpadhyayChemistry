@@ -179,6 +179,51 @@ export type Database = {
         }
         Relationships: []
       }
+      purchases: {
+        Row: {
+          amount: number
+          course_id: string
+          created_at: string
+          id: string
+          order_id: string
+          paid_at: string | null
+          payment_id: string | null
+          payment_method: string | null
+          points_discount: number | null
+          points_used: number | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          course_id: string
+          created_at?: string
+          id?: string
+          order_id: string
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          points_discount?: number | null
+          points_used?: number | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          course_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          points_discount?: number | null
+          points_used?: number | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           completed_at: string | null
