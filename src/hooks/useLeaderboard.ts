@@ -6,7 +6,6 @@ export interface LeaderboardUser {
   id: string;
   user_id: string;
   username: string | null;
-  avatar_url: string | null;
   xp: number;
   level: number;
   streak: number;
@@ -20,9 +19,10 @@ export const useLeaderboard = () => {
   const { user } = useAuth();
 
   const fetchLeaderboard = async () => {
+    // Only select non-sensitive fields for leaderboard
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, user_id, username, xp, level, streak')
       .order('xp', { ascending: false })
       .limit(100);
 
