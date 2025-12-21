@@ -12,6 +12,7 @@ import ruchiLogo from '@/assets/ruchi-logo.png';
 
 const navLinks = [
   { name: 'Home', path: '/' },
+  { name: 'About', path: '/about' },
   { name: 'All Courses', path: '/courses' },
   { name: 'Tests', path: '/tests' },
   { name: 'Leaderboard', path: '/leaderboard' },
