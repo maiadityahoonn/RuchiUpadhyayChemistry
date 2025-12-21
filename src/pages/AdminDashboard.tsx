@@ -1,40 +1,200 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  Users, BookOpen, Trophy, TrendingUp, Plus, Search,
-  MoreVertical, Edit, Trash2, Eye, Download, Filter,
-  BarChart3, PieChart, Activity, DollarSign, UserPlus,
-  Settings, Bell, LogOut, Menu, X, ChevronDown
+  Users, BookOpen, Trophy, TrendingUp, Search,
+  BarChart3, PieChart, Activity, DollarSign,
+  Settings, Bell, LogOut, Menu, X, FileText, ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { mockCourses, mockLeaderboard } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
+import { useIsAdmin, useNotes, useTests, useCoursesList } from '@/hooks/useAdmin';
+import AdminNotes from '@/components/admin/AdminNotes';
+import AdminTests from '@/components/admin/AdminTests';
+import AdminCourses from '@/components/admin/AdminCourses';
 
 const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { data: isAdmin, isLoading: isCheckingAdmin } = useIsAdmin();
+  const { data: notes } = useNotes();
+  const { data: tests } = useTests();
+  const { data: courses } = useCoursesList();
+
+  useEffect(() => {
+    if (!isCheckingAdmin && !isAdmin && user) {
+      // User is logged in but not admin - show message
+    }
+  }, [isAdmin, isCheckingAdmin, user]);
 
   const stats = [
-    { label: 'Total Users', value: '12,458', change: '+12%', icon: Users, color: 'bg-primary' },
-    { label: 'Active Courses', value: '156', change: '+5%', icon: BookOpen, color: 'bg-accent' },
-    { label: 'Total Revenue', value: '$45,890', change: '+23%', icon: DollarSign, color: 'bg-success' },
-    { label: 'Completion Rate', value: '78%', change: '+8%', icon: Trophy, color: 'bg-warning' },
+    { label: 'Total Courses', value: courses?.length || 0, change: '+5%', icon: BookOpen, color: 'bg-primary' },
+    { label: 'Total Tests', value: tests?.length || 0, change: '+12%', icon: ClipboardList, color: 'bg-accent' },
+    { label: 'Total Notes', value: notes?.length || 0, change: '+8%', icon: FileText, color: 'bg-success' },
+    { label: 'Active Items', value: (courses?.filter(c => c.is_active).length || 0) + (tests?.filter(t => t.is_active).length || 0), change: '+15%', icon: Trophy, color: 'bg-warning' },
   ];
-
-  const recentUsers = mockLeaderboard.slice(0, 5).map(entry => ({
-    ...entry.user,
-    enrolledDate: 'Dec 15, 2024',
-    status: Math.random() > 0.3 ? 'Active' : 'Inactive',
-  }));
 
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'users', label: 'Users', icon: Users },
     { id: 'courses', label: 'Courses', icon: BookOpen },
+    { id: 'tests', label: 'Tests', icon: ClipboardList },
+    { id: 'notes', label: 'Notes', icon: FileText },
     { id: 'analytics', label: 'Analytics', icon: PieChart },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Please Sign In</h1>
+          <p className="text-muted-foreground mb-4">You need to be logged in to access the admin panel.</p>
+          <Button onClick={() => navigate('/login')}>Go to Login</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isCheckingAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Checking permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-destructive" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-4">
+            You don't have admin privileges. Contact an administrator to get access.
+          </p>
+          <Button onClick={() => navigate('/')}>Go to Home</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'courses':
+        return <AdminCourses />;
+      case 'tests':
+        return <AdminTests />;
+      case 'notes':
+        return <AdminNotes />;
+      case 'overview':
+      default:
+        return (
+          <div className="space-y-6">
+            {/* Stats Grid */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {stats.map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-card rounded-2xl p-6 border border-border"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`p-3 rounded-xl ${stat.color}`}>
+                      <stat.icon className="w-6 h-6 text-primary-foreground" />
+                    </div>
+                    <Badge variant="secondary" className="text-success">
+                      {stat.change}
+                    </Badge>
+                  </div>
+                  <p className="text-3xl font-bold text-card-foreground">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid md:grid-cols-3 gap-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="bg-card rounded-2xl p-6 border border-border cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => setActiveTab('courses')}
+              >
+                <BookOpen className="w-10 h-10 text-primary mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Manage Courses</h3>
+                <p className="text-sm text-muted-foreground">Add, edit, or remove courses from the platform</p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="bg-card rounded-2xl p-6 border border-border cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => setActiveTab('tests')}
+              >
+                <ClipboardList className="w-10 h-10 text-accent mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Manage Tests</h3>
+                <p className="text-sm text-muted-foreground">Create and manage category-wise tests</p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="bg-card rounded-2xl p-6 border border-border cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => setActiveTab('notes')}
+              >
+                <FileText className="w-10 h-10 text-success mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Manage Notes</h3>
+                <p className="text-sm text-muted-foreground">Add study notes organized by category</p>
+              </motion.div>
+            </div>
+
+            {/* Activity Placeholder */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="bg-card rounded-2xl p-6 border border-border"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-heading font-semibold text-card-foreground">
+                  Platform Activity
+                </h2>
+                <div className="flex gap-2">
+                  <Button variant="secondary" size="sm">Daily</Button>
+                  <Button variant="ghost" size="sm">Weekly</Button>
+                  <Button variant="ghost" size="sm">Monthly</Button>
+                </div>
+              </div>
+              <div className="h-64 flex items-center justify-center bg-secondary/30 rounded-xl">
+                <div className="text-center">
+                  <Activity className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">Activity chart will be displayed here</p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -79,7 +239,10 @@ const AdminDashboard = () => {
 
         {/* Logout */}
         <div className="p-4 border-t border-border">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors">
+          <button 
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+          >
             <LogOut className="w-5 h-5 shrink-0" />
             {sidebarOpen && <span className="font-medium">Logout</span>}
           </button>
@@ -110,191 +273,8 @@ const AdminDashboard = () => {
         </header>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Stats Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-card rounded-2xl p-6 border border-border"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-xl ${stat.color}`}>
-                    <stat.icon className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <Badge variant="secondary" className="text-success">
-                    {stat.change}
-                  </Badge>
-                </div>
-                <p className="text-3xl font-bold text-card-foreground">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Tables */}
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Users Table */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-card rounded-2xl border border-border overflow-hidden"
-            >
-              <div className="p-6 border-b border-border flex items-center justify-between">
-                <h2 className="text-lg font-heading font-semibold text-card-foreground">
-                  Recent Users
-                </h2>
-                <Button variant="gradient" size="sm">
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Add User
-                </Button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-secondary/50">
-                    <tr>
-                      <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">User</th>
-                      <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Level</th>
-                      <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Status</th>
-                      <th className="text-right px-6 py-3 text-sm font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {recentUsers.map((user) => (
-                      <tr key={user.id} className="hover:bg-secondary/30 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-semibold">
-                              {user.name.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-medium text-card-foreground">{user.name}</p>
-                              <p className="text-sm text-muted-foreground">{user.email}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="font-semibold text-card-foreground">{user.level}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
-                            {user.status}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="icon">
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-
-            {/* Courses Table */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-card rounded-2xl border border-border overflow-hidden"
-            >
-              <div className="p-6 border-b border-border flex items-center justify-between">
-                <h2 className="text-lg font-heading font-semibold text-card-foreground">
-                  Top Courses
-                </h2>
-                <Button variant="gradient" size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Course
-                </Button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-secondary/50">
-                    <tr>
-                      <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Course</th>
-                      <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Students</th>
-                      <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Rating</th>
-                      <th className="text-right px-6 py-3 text-sm font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {mockCourses.slice(0, 5).map((course) => (
-                      <tr key={course.id} className="hover:bg-secondary/30 transition-colors">
-                        <td className="px-6 py-4">
-                          <div>
-                            <p className="font-medium text-card-foreground line-clamp-1">{course.title}</p>
-                            <p className="text-sm text-muted-foreground">{course.category}</p>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-card-foreground">{course.students.toLocaleString()}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-1">
-                            <span className="text-warning">★</span>
-                            <span className="font-medium text-card-foreground">{course.rating}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="icon">
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Activity Chart Placeholder */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-card rounded-2xl p-6 border border-border"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-heading font-semibold text-card-foreground">
-                Platform Activity
-              </h2>
-              <div className="flex gap-2">
-                <Button variant="secondary" size="sm">Daily</Button>
-                <Button variant="ghost" size="sm">Weekly</Button>
-                <Button variant="ghost" size="sm">Monthly</Button>
-              </div>
-            </div>
-            <div className="h-64 flex items-center justify-center bg-secondary/30 rounded-xl">
-              <div className="text-center">
-                <Activity className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">Activity chart will be displayed here</p>
-                <p className="text-sm text-muted-foreground">Connect to backend for real data</p>
-              </div>
-            </div>
-          </motion.div>
+        <div className="p-6">
+          {renderContent()}
         </div>
       </main>
     </div>
