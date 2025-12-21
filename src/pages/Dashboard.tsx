@@ -1,18 +1,84 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, Clock, Play, CheckCircle, Award, 
   Calendar, Bell, Settings, LogOut, ChevronRight,
-  Target, TrendingUp
+  Target, TrendingUp, Loader2, BookMarked
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import GamificationStats from '@/components/gamification/GamificationStats';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { mockUser, mockCourses } from '@/data/mockData';
+import { mockCourses } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCourses } from '@/hooks/useCourses';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface TestResult {
+  id: string;
+  test_id: string;
+  score: number;
+  total_questions: number;
+  xp_earned: number;
+  completed_at: string;
+}
 
 const Dashboard = () => {
-  const enrolledCourses = mockCourses.filter(c => mockUser.coursesEnrolled.includes(c.id));
+  const { user, profile, loading: authLoading } = useAuth();
+  const { enrolledCourses, loading: coursesLoading } = useCourses();
+  const navigate = useNavigate();
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [resultsLoading, setResultsLoading] = useState(true);
+
+  // Fetch test results
+  useEffect(() => {
+    const fetchTestResults = async () => {
+      if (!user) {
+        setResultsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('test_results')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: false })
+        .limit(5);
+
+      if (!error && data) {
+        setTestResults(data);
+      }
+      setResultsLoading(false);
+    };
+
+    fetchTestResults();
+  }, [user]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login');
+    }
+  }, [authLoading, user, navigate]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Get enrolled course details from mock data
+  const enrolledCourseDetails = enrolledCourses.map(enrollment => {
+    const courseData = mockCourses.find(c => c.id === enrollment.course_id);
+    return {
+      ...enrollment,
+      courseData,
+    };
+  }).filter(c => c.courseData);
 
   const upcomingLessons = [
     { title: 'Introduction to React Hooks', course: 'Complete Web Development', time: '2:00 PM', duration: '30 min' },
@@ -20,11 +86,13 @@ const Dashboard = () => {
     { title: 'Building REST APIs', course: 'Complete Web Development', time: 'Tomorrow', duration: '1 hr' },
   ];
 
-  const recentActivity = [
-    { action: 'Completed lesson', item: 'CSS Flexbox Fundamentals', xp: 25, time: '2 hours ago' },
-    { action: 'Earned badge', item: 'Quick Learner', xp: 50, time: '5 hours ago' },
-    { action: 'Passed quiz', item: 'JavaScript Basics Quiz', xp: 100, time: '1 day ago' },
-  ];
+  // Build activity from test results
+  const recentActivity = testResults.map(result => ({
+    action: 'Passed quiz',
+    item: result.test_id.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    xp: result.xp_earned,
+    time: new Date(result.completed_at).toLocaleDateString(),
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,11 +108,11 @@ const Dashboard = () => {
           >
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center text-2xl font-bold text-primary-foreground">
-                {mockUser.name.charAt(0)}
+                {profile?.username?.charAt(0) || user.email?.charAt(0) || '?'}
               </div>
               <div>
                 <h1 className="text-2xl font-heading font-bold text-foreground">
-                  Welcome back, {mockUser.name.split(' ')[0]}!
+                  Welcome back, {profile?.username || user.email?.split('@')[0]}!
                 </h1>
                 <p className="text-muted-foreground">
                   Continue your learning journey
@@ -65,7 +133,21 @@ const Dashboard = () => {
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
               {/* Gamification Stats */}
-              <GamificationStats user={mockUser} />
+              {profile && (
+                <GamificationStats user={{
+                  id: user.id,
+                  name: profile.username || 'User',
+                  email: user.email || '',
+                  avatar: profile.avatar_url || '',
+                  xp: profile.xp,
+                  level: profile.level,
+                  streak: profile.streak,
+                  badges: [],
+                  coursesEnrolled: enrolledCourses.map(c => c.course_id),
+                  coursesCompleted: enrolledCourses.filter(c => c.progress >= 100).map(c => c.course_id),
+                  rank: 0,
+                }} />
+              )}
 
               {/* My Courses */}
               <motion.div
@@ -78,48 +160,63 @@ const Dashboard = () => {
                   <h2 className="text-xl font-heading font-semibold text-card-foreground">
                     My Courses
                   </h2>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/courses')}>
                     View All
                     <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
                 </div>
 
-                <div className="space-y-4">
-                  {enrolledCourses.map((course, index) => (
-                    <motion.div
-                      key={course.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + index * 0.1 }}
-                      className="flex items-center gap-4 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors"
-                    >
-                      <div className="w-16 h-16 rounded-xl gradient-primary flex items-center justify-center shrink-0">
-                        <BookOpen className="w-8 h-8 text-primary-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-card-foreground truncate">
-                          {course.title}
-                        </h3>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          <span>{course.lessons} lessons</span>
-                          <span>•</span>
-                          <span>{course.duration}</span>
+                {coursesLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : enrolledCourseDetails.length === 0 ? (
+                  <div className="text-center py-12">
+                    <BookMarked className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="font-semibold text-foreground mb-2">No courses yet</h3>
+                    <p className="text-muted-foreground mb-4">Start learning by enrolling in a course</p>
+                    <Button variant="gradient" onClick={() => navigate('/courses')}>
+                      Browse Courses
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {enrolledCourseDetails.map((enrollment, index) => (
+                      <motion.div
+                        key={enrollment.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.4 + index * 0.1 }}
+                        className="flex items-center gap-4 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors"
+                      >
+                        <div className="w-16 h-16 rounded-xl gradient-primary flex items-center justify-center shrink-0">
+                          <BookOpen className="w-8 h-8 text-primary-foreground" />
                         </div>
-                        <div className="mt-2">
-                          <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-muted-foreground">Progress</span>
-                            <span className="font-semibold text-primary">65%</span>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-card-foreground truncate">
+                            {enrollment.courseData?.title}
+                          </h3>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                            <span>{enrollment.courseData?.lessons} lessons</span>
+                            <span>•</span>
+                            <span>{enrollment.courseData?.duration}</span>
                           </div>
-                          <Progress value={65} className="h-2" />
+                          <div className="mt-2">
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="text-muted-foreground">Progress</span>
+                              <span className="font-semibold text-primary">{enrollment.progress}%</span>
+                            </div>
+                            <Progress value={enrollment.progress} className="h-2" />
+                          </div>
                         </div>
-                      </div>
-                      <Button variant="gradient" size="sm">
-                        <Play className="w-4 h-4 mr-1" />
-                        Continue
-                      </Button>
-                    </motion.div>
-                  ))}
-                </div>
+                        <Button variant="gradient" size="sm">
+                          <Play className="w-4 h-4 mr-1" />
+                          {enrollment.progress > 0 ? 'Continue' : 'Start'}
+                        </Button>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             </div>
 
@@ -198,28 +295,38 @@ const Dashboard = () => {
                   </div>
                   <h3 className="font-heading font-semibold text-card-foreground">Activity</h3>
                 </div>
-                <div className="space-y-3">
-                  {recentActivity.map((activity, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center shrink-0">
-                        <CheckCircle className="w-4 h-4 text-success" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-card-foreground">
-                          <span className="text-muted-foreground">{activity.action}: </span>
-                          {activity.item}
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-xs text-muted-foreground">{activity.time}</span>
-                          <span className="text-xs font-semibold text-success">+{activity.xp} XP</span>
+                {resultsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : recentActivity.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No recent activity. Take a quiz to get started!
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {recentActivity.map((activity, index) => (
+                      <div
+                        key={index}
+                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                          <CheckCircle className="w-4 h-4 text-success" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-card-foreground">
+                            <span className="text-muted-foreground">{activity.action}: </span>
+                            {activity.item}
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-xs text-muted-foreground">{activity.time}</span>
+                            <span className="text-xs font-semibold text-success">+{activity.xp} XP</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             </div>
           </div>
