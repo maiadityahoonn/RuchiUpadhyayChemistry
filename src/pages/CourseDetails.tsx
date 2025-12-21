@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import CourseFAQ from '@/components/courses/CourseFAQ';
 import CheckoutModal from '@/components/checkout/CheckoutModal';
+import CourseCertificate from '@/components/certificate/CourseCertificate';
 import { useCourses } from '@/hooks/useCourses';
 import { useCoursesList } from '@/hooks/useAdmin';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,8 +30,8 @@ const CourseDetails = () => {
   const navigate = useNavigate();
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  const { enrollInCourse, isEnrolled, getProgress, refetch } = useCourses();
-  const { user } = useAuth();
+  const { enrollInCourse, isEnrolled, getProgress, getCompletedAt, refetch } = useCourses();
+  const { user, profile } = useAuth();
   const { rewardPoints } = useReferrals();
   const { data: dbCourses } = useCoursesList();
 
@@ -243,9 +244,24 @@ const CourseDetails = () => {
                           {progress > 0 ? 'Continue Learning' : 'Start Course'}
                         </Button>
                         
-                        <p className="text-sm text-center text-muted-foreground">
-                          {progress === 100 ? 'Congratulations! Course completed!' : `${course.lessons - Math.floor(course.lessons * progress / 100)} lessons remaining`}
-                        </p>
+                        {progress === 100 ? (
+                          <div className="space-y-3">
+                            <p className="text-sm text-center text-success font-medium">
+                              🎉 Congratulations! Course completed!
+                            </p>
+                            <CourseCertificate
+                              courseName={course.title}
+                              studentName={profile?.username || user?.email?.split('@')[0] || 'Student'}
+                              instructor={course.instructor}
+                              completionDate={getCompletedAt(course.id) || new Date()}
+                              courseId={course.id}
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-sm text-center text-muted-foreground">
+                            {course.lessons - Math.floor(course.lessons * progress / 100)} lessons remaining
+                          </p>
+                        )}
                       </>
                     ) : (
                       <>
