@@ -54,7 +54,7 @@ const Navbar = () => {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'glass shadow-lg' : 'bg-transparent'
+        scrolled ? 'bg-card shadow-lg border-b border-border' : 'bg-transparent'
       }`}
     >
       <div className="container mx-auto px-4">
@@ -63,7 +63,7 @@ const Navbar = () => {
           <Link to="/" className="flex items-center gap-2">
             <img src={ruchiLogo} alt="Ruchi Upadhyay Chemistry" className="h-10 w-auto" />
             <span className="text-lg font-heading font-bold hidden sm:block">
-              <span className={scrolled ? 'text-foreground' : 'text-white'}>Ruchi</span>{' '}
+              <span className="text-foreground">Ruchi</span>{' '}
               <span className="text-primary">Chemistry</span>
             </span>
           </Link>
@@ -77,7 +77,7 @@ const Navbar = () => {
                 className={`relative text-sm font-medium transition-colors hover:text-primary ${
                   location.pathname === link.path
                     ? 'text-primary'
-                    : scrolled ? 'text-muted-foreground' : 'text-white/80'
+                    : 'text-muted-foreground'
                 }`}
               >
                 {link.name}
@@ -98,7 +98,7 @@ const Navbar = () => {
                 className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary ${
                   location.pathname.startsWith('/courses/') && location.pathname !== '/courses'
                     ? 'text-primary'
-                    : scrolled ? 'text-muted-foreground' : 'text-white/80'
+                    : 'text-muted-foreground'
                 }`}
               >
                 Categories
