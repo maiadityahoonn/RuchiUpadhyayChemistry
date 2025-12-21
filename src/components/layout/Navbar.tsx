@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Menu, X, LogIn, 
-  Flame, Zap, LayoutDashboard, LogOut
+  LayoutDashboard, LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,28 +81,10 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-4">
             {user ? (
               <>
-                {/* Streak Badge */}
-                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/10 text-accent">
-                  <Flame className="w-4 h-4" />
-                  <span className="text-sm font-semibold">{profile?.streak ?? 0}</span>
-                </div>
-
-                {/* XP Badge */}
-                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary">
-                  <Zap className="w-4 h-4" />
-                  <span className="text-sm font-semibold">{profile?.xp?.toLocaleString() ?? 0}</span>
-                </div>
-
                 <Link to="/dashboard">
                   <Button variant="ghost" size="sm">
                     <LayoutDashboard className="w-4 h-4 mr-2" />
                     Dashboard
-                  </Button>
-                </Link>
-
-                <Link to="/admin">
-                  <Button variant="outline" size="sm">
-                    Admin
                   </Button>
                 </Link>
 
@@ -163,11 +145,6 @@ const Navbar = () => {
                         <Button variant="secondary" className="w-full justify-start">
                           <LayoutDashboard className="w-4 h-4 mr-2" />
                           Dashboard
-                        </Button>
-                      </Link>
-                      <Link to="/admin" onClick={() => setIsOpen(false)}>
-                        <Button variant="outline" className="w-full justify-start">
-                          Admin Panel
                         </Button>
                       </Link>
                       <Button 
