@@ -63,10 +63,6 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img src={ruchiLogo} alt="Ruchi Upadhyay Chemistry" className="h-10 w-auto" />
-            <span className="text-lg font-heading font-bold hidden sm:block">
-              <span className="text-foreground">Ruchi</span>{' '}
-              <span className="text-primary">Chemistry</span>
-            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -92,7 +88,7 @@ const Navbar = () => {
             ))}
 
             {/* Categories Dropdown */}
-            <div className="relative">
+            {/* <div className="relative">
               <button
                 onClick={() => setCategoriesOpen(!categoriesOpen)}
                 onMouseEnter={() => setCategoriesOpen(true)}
@@ -130,7 +126,7 @@ const Navbar = () => {
                 )}
               </AnimatePresence>
             </div>
-          </div>
+          </div> */}
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-4">
@@ -211,7 +207,7 @@ const Navbar = () => {
                 ))}
 
                 {/* Mobile Categories */}
-                <div className="px-4 py-2">
+                {/* <div className="px-4 py-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     Categories
                   </p>
@@ -228,7 +224,7 @@ const Navbar = () => {
                       </Link>
                     ))}
                   </div>
-                </div>
+                </div> */}
 
                 <div className="pt-4 space-y-2 px-4">
                   {user ? (
