@@ -3,10 +3,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Menu, X, LogIn, 
-  LayoutDashboard, LogOut
+  LayoutDashboard, LogOut, Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsAdmin } from '@/hooks/useAdmin';
 import ruchiLogo from '@/assets/ruchi-logo.png';
 
 const navLinks = [
@@ -25,6 +26,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
+  const { data: isAdmin } = useIsAdmin();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -87,6 +89,15 @@ const Navbar = () => {
                     Dashboard
                   </Button>
                 </Link>
+
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Button variant="outline" size="sm" className="border-primary/50 text-primary hover:bg-primary/10">
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin
+                    </Button>
+                  </Link>
+                )}
 
                 <Button variant="ghost" size="sm" onClick={handleSignOut}>
                   <LogOut className="w-4 h-4 mr-2" />
