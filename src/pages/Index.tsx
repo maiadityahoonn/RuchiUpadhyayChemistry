@@ -3,11 +3,15 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Users, BookOpen, Trophy, Star, Award, Play } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import HeroBannerCarousel from '@/components/home/HeroBannerCarousel';
+import MarqueeSection from '@/components/home/MarqueeSection';
 import CategoryGrid from '@/components/home/CategoryGrid';
+import WhyChooseUs from '@/components/home/WhyChooseUs';
+import TestimonialsSection from '@/components/home/TestimonialsSection';
+import ContactSection from '@/components/home/ContactSection';
 import CourseCard from '@/components/courses/CourseCard';
 import { Button } from '@/components/ui/button';
 import { mockCourses, mockBadges } from '@/data/mockData';
-import banner1 from '@/assets/banner1.png';
 
 const Index = () => {
   const featuredCourses = mockCourses.slice(0, 3);
@@ -23,10 +27,11 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      {/* Hero Banner */}
-      <section className="pt-16 md:pt-20">
-        <img src={banner1} alt="Ruchi Upadhyay Chemistry Classes" className="w-full h-auto" />
-      </section>
+      {/* Hero Banner Carousel */}
+      <HeroBannerCarousel />
+
+      {/* Marquee Announcements */}
+      <MarqueeSection />
 
       {/* Stats Section */}
       <section className="py-16 bg-secondary/30">
@@ -57,8 +62,11 @@ const Index = () => {
       {/* Category Grid */}
       <CategoryGrid />
 
+      {/* Why Choose Us */}
+      <WhyChooseUs />
+
       {/* Featured Courses */}
-      <section className="py-20">
+      <section className="py-20 bg-secondary/30">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -100,8 +108,11 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <TestimonialsSection />
+
       {/* Badges Showcase */}
-      <section className="py-20 bg-secondary/30">
+      <section className="py-20">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -144,6 +155,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Contact Section */}
+      <ContactSection />
 
       {/* CTA Section */}
       <section className="py-20 gradient-hero">
