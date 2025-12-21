@@ -264,6 +264,32 @@ const Dashboard = () => {
                 {/* Points & Discount Card */}
                 <PointsDiscountCard />
 
+                {/* Purchase History Quick Link */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.45 }}
+                  className="bg-card rounded-2xl p-6 border border-border shadow-lg"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-xl bg-green-500/10">
+                      <BookMarked className="w-5 h-5 text-green-500" />
+                    </div>
+                    <h3 className="font-heading font-semibold text-card-foreground">My Purchases</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    View your course purchases, points used, and transaction history.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => navigate('/purchases')}
+                  >
+                    View Purchase History
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </motion.div>
+
                 {/* Daily Goal */}
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
