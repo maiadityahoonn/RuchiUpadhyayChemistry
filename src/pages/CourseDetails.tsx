@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Star, Clock, Users, Zap, BookOpen, CheckCircle, Loader2, Play,
   ChevronLeft, Award, Target, FileText, Video, ArrowRight,
-  GraduationCap, Calendar, Globe, Shield, Coins
+  GraduationCap, Globe, Shield, Coins
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import CourseFAQ from '@/components/courses/CourseFAQ';
 import CheckoutModal from '@/components/checkout/CheckoutModal';
@@ -20,12 +20,12 @@ import CourseCertificate from '@/components/certificate/CourseCertificate';
 import VideoPlayer from '@/components/courses/VideoPlayer';
 import { useCourses } from '@/hooks/useCourses';
 import { useLessonProgress } from '@/hooks/useLessonProgress';
-import { useCoursesList } from '@/hooks/useAdmin';
+import { useCoursesList, useLessons } from '@/hooks/useAdmin';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReferrals } from '@/hooks/useReferrals';
-import { mockCourses } from '@/data/mockData';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const POINTS_PER_RUPEE = 10;
 
@@ -38,12 +38,36 @@ const CourseDetails = () => {
   const { enrollInCourse, isEnrolled, getProgress, getCompletedAt, refetch } = useCourses();
   const { user, profile } = useAuth();
   const { rewardPoints } = useReferrals();
-  const { data: dbCourses } = useCoursesList();
+  const { data: dbCourses, isLoading: coursesLoading } = useCoursesList();
+  const { data: dbLessons, isLoading: lessonsLoading } = useLessons(id);
   const { toast } = useToast();
 
-  // Try to find course in database first, then mock data
+  // Set up realtime subscription for lessons
+  useEffect(() => {
+    if (!id) return;
+    
+    const channel = supabase
+      .channel('lessons-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lessons',
+          filter: `course_id=eq.${id}`
+        },
+        () => {
+          // The useLessons hook will automatically refetch
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
+
   const dbCourse = dbCourses?.find(c => c.id === id);
-  const mockCourse = mockCourses.find(c => c.id === id);
   
   // Convert db course to match the expected format
   const course = dbCourse ? {
@@ -61,7 +85,19 @@ const CourseDetails = () => {
     rating: 4.8,
     students: 0,
     xpReward: dbCourse.xp_reward,
-  } : mockCourse;
+  } : null;
+
+  if (coursesLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-24 pb-16 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!course) {
     return (
@@ -103,48 +139,25 @@ const CourseDetails = () => {
     setIsEnrolling(false);
   };
 
-  // Generate sample curriculum with YouTube video IDs
-  // Replace these with actual unlisted YouTube video IDs
-  const curriculum = [
-    {
-      title: 'Introduction',
-      lessons: [
-        { title: 'Welcome to the Course', duration: '5 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
-        { title: 'Course Overview', duration: '10 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
-        { title: 'Setting Up Your Environment', duration: '15 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
-      ],
-    },
-    {
-      title: 'Core Concepts',
-      lessons: [
-        { title: 'Understanding the Basics', duration: '20 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
-        { title: 'Key Principles & Theory', duration: '25 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
-        { title: 'Practice Problems Set 1', duration: '30 min', type: 'quiz', videoId: '' },
-      ],
-    },
-    {
-      title: 'Advanced Topics',
-      lessons: [
-        { title: 'Deep Dive into Concepts', duration: '30 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
-        { title: 'Real-World Applications', duration: '25 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
-        { title: 'Case Studies', duration: '20 min', type: 'reading', videoId: '' },
-      ],
-    },
-    {
-      title: 'Final Assessment',
-      lessons: [
-        { title: 'Comprehensive Review', duration: '20 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
-        { title: 'Final Exam', duration: '60 min', type: 'quiz', videoId: '' },
-        { title: 'Certificate of Completion', duration: '5 min', type: 'certificate', videoId: '' },
-      ],
-    },
-  ];
+  // Build curriculum from database lessons
+  const curriculum = dbLessons && dbLessons.length > 0
+    ? [{
+        title: 'Course Content',
+        lessons: dbLessons.map(lesson => ({
+          title: lesson.title,
+          duration: lesson.duration || '0 min',
+          type: lesson.youtube_video_id ? 'video' : 'reading',
+          videoId: lesson.youtube_video_id || '',
+          is_free: lesson.is_free,
+        })),
+      }]
+    : [];
 
   const handleLessonClick = (sectionIndex: number, lessonIndex: number, lesson: typeof curriculum[0]['lessons'][0]) => {
-    if (!enrolled) {
+    if (!enrolled && !lesson.is_free) {
       toast({
         title: 'Enrollment Required',
-        description: 'Please enroll in this course to watch lessons.',
+        description: 'Please enroll in this course to watch this lesson.',
         variant: 'destructive',
       });
       return;
@@ -157,20 +170,10 @@ const CourseDetails = () => {
         sectionIndex,
         lessonIndex,
       });
-    } else if (lesson.type === 'quiz') {
-      toast({
-        title: 'Quiz',
-        description: 'Quiz functionality coming soon!',
-      });
     } else if (lesson.type === 'reading') {
       toast({
         title: 'Reading Material',
-        description: 'Reading materials coming soon!',
-      });
-    } else if (lesson.type === 'certificate') {
-      toast({
-        title: 'Certificate',
-        description: 'Complete all lessons to unlock your certificate!',
+        description: 'This lesson has no video content.',
       });
     }
   };
@@ -181,8 +184,8 @@ const CourseDetails = () => {
     }
   };
 
-  // Calculate total lessons from curriculum
-  const totalLessons = curriculum.reduce((acc, section) => acc + section.lessons.length, 0);
+  // Calculate total lessons
+  const totalLessons = dbLessons?.length || 0;
   
   // Use lesson progress hook
   const { 
@@ -193,7 +196,7 @@ const CourseDetails = () => {
   } = useLessonProgress(course.id, totalLessons);
 
   const features = [
-    { icon: Video, label: `${course.lessons} Video Lessons` },
+    { icon: Video, label: `${totalLessons} Video Lessons` },
     { icon: FileText, label: 'Downloadable Resources' },
     { icon: Target, label: 'Practice Quizzes' },
     { icon: Award, label: 'Certificate of Completion' },
@@ -264,7 +267,7 @@ const CourseDetails = () => {
                     
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <BookOpen className="w-5 h-5" />
-                      {course.lessons} lessons
+                      {totalLessons} lessons
                     </div>
                   </div>
                 </motion.div>
@@ -411,76 +414,94 @@ const CourseDetails = () => {
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-heading font-bold text-foreground">Course Content</h2>
                     <p className="text-sm text-muted-foreground">
-                      {curriculum.length} sections • {course.lessons} lessons • {course.duration}
+                      {totalLessons} lessons • {course.duration}
                     </p>
                   </div>
                   
-                  <Accordion type="single" collapsible className="space-y-4">
-                    {curriculum.map((section, sIndex) => (
-                      <AccordionItem 
-                        key={sIndex} 
-                        value={`section-${sIndex}`}
-                        className="bg-card border border-border rounded-xl px-6 overflow-hidden"
-                      >
-                        <AccordionTrigger className="hover:no-underline py-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-semibold">
-                              {sIndex + 1}
+                  {lessonsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                  ) : curriculum.length > 0 ? (
+                    <Accordion type="single" collapsible defaultValue="section-0" className="space-y-4">
+                      {curriculum.map((section, sIndex) => (
+                        <AccordionItem 
+                          key={sIndex} 
+                          value={`section-${sIndex}`}
+                          className="bg-card border border-border rounded-xl px-6 overflow-hidden"
+                        >
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                                {sIndex + 1}
+                              </div>
+                              <div className="text-left">
+                                <h3 className="font-semibold text-foreground">{section.title}</h3>
+                                <p className="text-sm text-muted-foreground">{section.lessons.length} lessons</p>
+                              </div>
                             </div>
-                            <div className="text-left">
-                              <h3 className="font-semibold text-foreground">{section.title}</h3>
-                              <p className="text-sm text-muted-foreground">{section.lessons.length} lessons</p>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <div className="space-y-2 ml-14">
+                              {section.lessons.map((lesson, lIndex) => {
+                                const lessonCompleted = isLessonCompleted(sIndex, lIndex);
+                                const canAccess = enrolled || lesson.is_free;
+                                return (
+                                  <div 
+                                    key={lIndex}
+                                    onClick={() => handleLessonClick(sIndex, lIndex, lesson)}
+                                    className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                                      canAccess ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+                                    } ${
+                                      lessonCompleted 
+                                        ? 'bg-success/10 border border-success/20' 
+                                        : canAccess ? 'hover:bg-secondary/50 hover:border-primary/50 hover:border' : ''
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      {enrolled && (
+                                        <Checkbox
+                                          checked={lessonCompleted}
+                                          onCheckedChange={() => toggleLessonComplete(sIndex, lIndex)}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="data-[state=checked]:bg-success data-[state=checked]:border-success"
+                                        />
+                                      )}
+                                      {lesson.type === 'video' && <Video className={`w-4 h-4 ${lessonCompleted ? 'text-success' : 'text-primary'}`} />}
+                                      {lesson.type === 'reading' && <FileText className={`w-4 h-4 ${lessonCompleted ? 'text-success' : 'text-muted-foreground'}`} />}
+                                      <span className={`text-sm ${lessonCompleted ? 'text-success line-through' : 'text-foreground'}`}>
+                                        {lesson.title}
+                                      </span>
+                                      {lesson.is_free && !enrolled && (
+                                        <Badge variant="secondary" className="text-xs">Free</Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {canAccess && lesson.type === 'video' && !lessonCompleted && (
+                                        <Play className="w-4 h-4 text-primary" />
+                                      )}
+                                      {lessonCompleted && (
+                                        <CheckCircle className="w-4 h-4 text-success" />
+                                      )}
+                                      <span className="text-xs text-muted-foreground">{lesson.duration}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-4">
-                          <div className="space-y-2 ml-14">
-                            {section.lessons.map((lesson, lIndex) => {
-                              const lessonCompleted = isLessonCompleted(sIndex, lIndex);
-                              return (
-                                <div 
-                                  key={lIndex}
-                                  onClick={() => handleLessonClick(sIndex, lIndex, lesson)}
-                                  className={`flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer ${
-                                    lessonCompleted 
-                                      ? 'bg-success/10 border border-success/20' 
-                                      : 'hover:bg-secondary/50'
-                                  } ${enrolled && lesson.type === 'video' ? 'hover:border-primary/50 hover:border' : ''}`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    {enrolled && (
-                                      <Checkbox
-                                        checked={lessonCompleted}
-                                        onCheckedChange={() => toggleLessonComplete(sIndex, lIndex)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="data-[state=checked]:bg-success data-[state=checked]:border-success"
-                                      />
-                                    )}
-                                    {lesson.type === 'video' && <Video className={`w-4 h-4 ${lessonCompleted ? 'text-success' : 'text-primary'}`} />}
-                                    {lesson.type === 'quiz' && <Target className={`w-4 h-4 ${lessonCompleted ? 'text-success' : 'text-accent'}`} />}
-                                    {lesson.type === 'reading' && <FileText className={`w-4 h-4 ${lessonCompleted ? 'text-success' : 'text-success'}`} />}
-                                    {lesson.type === 'certificate' && <Award className={`w-4 h-4 ${lessonCompleted ? 'text-success' : 'text-warning'}`} />}
-                                    <span className={`text-sm ${lessonCompleted ? 'text-success line-through' : 'text-foreground'}`}>
-                                      {lesson.title}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {enrolled && lesson.type === 'video' && !lessonCompleted && (
-                                      <Play className="w-4 h-4 text-primary" />
-                                    )}
-                                    {lessonCompleted && (
-                                      <CheckCircle className="w-4 h-4 text-success" />
-                                    )}
-                                    <span className="text-xs text-muted-foreground">{lesson.duration}</span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  ) : (
+                    <div className="text-center py-12 bg-card rounded-xl border border-border">
+                      <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No lessons yet</h3>
+                      <p className="text-muted-foreground">
+                        The instructor is still adding content to this course.
+                      </p>
+                    </div>
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="overview" className="space-y-8">
