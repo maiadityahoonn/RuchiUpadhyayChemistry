@@ -14,6 +14,7 @@ const navLinks = [
   { name: 'Home', path: '/' },
   { name: 'About', path: '/about' },
   { name: 'All Courses', path: '/courses' },
+  { name: 'Notes', path: '/notes' },
   { name: 'Tests', path: '/tests' },
   { name: 'Leaderboard', path: '/leaderboard' },
   { name: 'Contact', path: '/contact' },

@@ -20,7 +20,7 @@ import { courseCategories } from '@/data/mockData';
 const CategoryTests = () => {
   const { category } = useParams<{ category: string }>();
   const navigate = useNavigate();
-  const { user, updateXP } = useAuth();
+  const { user, addXP } = useAuth();
   const { toast } = useToast();
   
   const categoryInfo = courseCategories.find(c => c.slug === category);
@@ -106,7 +106,7 @@ const CategoryTests = () => {
         xp_earned: score.xp,
       });
       
-      await updateXP(score.xp);
+      await addXP(score.xp);
       
       toast({
         title: 'Test Completed!',

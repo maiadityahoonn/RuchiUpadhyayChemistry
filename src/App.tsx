@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import CategoryCourses from "./pages/CategoryCourses";
 import Tests from "./pages/Tests";
+import CategoryTests from "./pages/CategoryTests";
+import Notes from "./pages/Notes";
 import Leaderboard from "./pages/Leaderboard";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -30,6 +32,8 @@ const App = () => (
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/:category" element={<CategoryCourses />} />
             <Route path="/tests" element={<Tests />} />
+            <Route path="/tests/:category" element={<CategoryTests />} />
+            <Route path="/notes" element={<Notes />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
