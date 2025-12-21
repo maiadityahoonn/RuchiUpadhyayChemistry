@@ -4,6 +4,7 @@ import { ArrowRight, Users, BookOpen, Trophy, Star, Award, Play } from 'lucide-r
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import HeroBannerCarousel from '@/components/home/HeroBannerCarousel';
+import HeroContent from '@/components/home/HeroContent';
 import MarqueeSection from '@/components/home/MarqueeSection';
 import CategoryGrid from '@/components/home/CategoryGrid';
 import WhyChooseUs from '@/components/home/WhyChooseUs';
@@ -27,8 +28,11 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      {/* Hero Banner Carousel */}
+      {/* Hero Banner Carousel - Clean banner only */}
       <HeroBannerCarousel />
+
+      {/* Hero Content - Text below banner */}
+      <HeroContent />
 
       {/* Marquee Announcements */}
       <MarqueeSection />
