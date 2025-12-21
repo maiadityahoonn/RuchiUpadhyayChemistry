@@ -1,25 +1,18 @@
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Twitter, Facebook, Instagram, Linkedin, Youtube } from 'lucide-react';
-import ruchiLogo from '@/assets/ruchi-logo.png';
 
 const Footer = () => {
   return (
     <footer className="bg-foreground text-background">
       <div className="container mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
           {/* Brand */}
           <div className="space-y-6">
             <Link to="/" className="flex items-center gap-3">
-              <img src={ruchiLogo} alt="Ruchi Upadhyay Chemistry" className="h-12 w-auto" />
-              <div>
-                <span className="text-xl font-heading font-bold block">
-                  Ruchi Upadhyay
-                </span>
-                <span className="text-sm text-primary">Chemistry Classes</span>
-              </div>
+              <span className="text-2xl font-heading font-bold text-primary">EduLearn</span>
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Master Chemistry with expert guidance. Specialized coaching for Class 10, 12, IIT-JEE, NEET, Engineering & Environmental Science.
+              Your gateway to quality education. Learn from expert instructors and achieve your academic goals.
             </p>
             <div className="flex gap-4">
               <a href="#" className="p-2 rounded-lg bg-background/10 hover:bg-primary transition-colors">
@@ -46,31 +39,12 @@ const Footer = () => {
             <ul className="space-y-3">
               {[
                 { name: 'Home', path: '/' },
-                { name: 'Courses', path: '/courses' },
+                { name: 'About Us', path: '/about' },
+                { name: 'All Courses', path: '/courses' },
+                { name: 'Notes', path: '/notes' },
                 { name: 'Tests', path: '/tests' },
                 { name: 'Leaderboard', path: '/leaderboard' },
                 { name: 'Contact Us', path: '/contact' },
-              ].map((item) => (
-                <li key={item.name}>
-                  <Link to={item.path} className="text-muted-foreground hover:text-primary transition-colors text-sm">
-                    {item.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Categories */}
-          <div>
-            <h4 className="font-heading font-semibold text-lg mb-6">Courses</h4>
-            <ul className="space-y-3">
-              {[
-                { name: 'Class 10 Chemistry', path: '/courses/class-10' },
-                { name: 'Class 12 Chemistry', path: '/courses/class-12' },
-                { name: 'IIT-JEE Chemistry', path: '/courses/iit-jee' },
-                { name: 'NEET Chemistry', path: '/courses/neet' },
-                { name: 'Engineering Chemistry', path: '/courses/engineering' },
-                { name: 'Environmental Science', path: '/courses/environmental' },
               ].map((item) => (
                 <li key={item.name}>
                   <Link to={item.path} className="text-muted-foreground hover:text-primary transition-colors text-sm">
@@ -108,7 +82,7 @@ const Footer = () => {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-background/10 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-muted-foreground text-sm">
-            © 2024 Ruchi Upadhyay Chemistry Classes. All rights reserved.
+            © 2024 EduLearn. All rights reserved.
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-muted-foreground hover:text-primary text-sm">Privacy Policy</a>
