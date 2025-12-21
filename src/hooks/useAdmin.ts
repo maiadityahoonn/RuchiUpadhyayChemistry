@@ -53,6 +53,35 @@ export interface Course {
   updated_at: string;
 }
 
+export interface Lesson {
+  id: string;
+  course_id: string;
+  title: string;
+  description: string | null;
+  youtube_video_id: string | null;
+  duration: string | null;
+  order_index: number;
+  is_free: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserRole {
+  id: string;
+  user_id: string;
+  role: 'admin' | 'moderator' | 'user';
+  created_at: string;
+}
+
+export interface UserWithProfile {
+  id: string;
+  email: string;
+  username: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  role?: 'admin' | 'moderator' | 'user';
+}
+
 export const useIsAdmin = () => {
   const { user } = useAuth();
 
@@ -344,6 +373,183 @@ export const useDeleteCourse = () => {
     },
     onError: (error: Error) => {
       toast({ title: 'Failed to delete course', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+// Lessons CRUD
+export const useLessons = (courseId?: string) => {
+  return useQuery({
+    queryKey: ['lessons', courseId],
+    queryFn: async () => {
+      if (!courseId) return [];
+      
+      const { data, error } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('order_index', { ascending: true });
+      
+      if (error) throw error;
+      return data as Lesson[];
+    },
+    enabled: !!courseId,
+  });
+};
+
+export const useCreateLesson = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (lesson: Omit<Lesson, 'id' | 'created_at' | 'updated_at'>) => {
+      const { data, error } = await supabase
+        .from('lessons')
+        .insert([lesson])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['lessons', variables.course_id] });
+      toast({ title: 'Lesson created successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to create lesson', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useUpdateLesson = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, ...lesson }: Partial<Lesson> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('lessons')
+        .update(lesson)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['lessons', data.course_id] });
+      toast({ title: 'Lesson updated successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to update lesson', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useDeleteLesson = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, courseId }: { id: string; courseId: string }) => {
+      const { error } = await supabase.from('lessons').delete().eq('id', id);
+      if (error) throw error;
+      return courseId;
+    },
+    onSuccess: (courseId) => {
+      queryClient.invalidateQueries({ queryKey: ['lessons', courseId] });
+      toast({ title: 'Lesson deleted successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to delete lesson', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+// User Role Management
+export const useUsers = () => {
+  return useQuery({
+    queryKey: ['users-with-roles'],
+    queryFn: async () => {
+      // Get all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, username, avatar_url, created_at')
+        .order('created_at', { ascending: false });
+      
+      if (profilesError) throw profilesError;
+
+      // Get all user roles
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+      
+      if (rolesError) throw rolesError;
+
+      // Merge the data
+      const usersWithRoles: UserWithProfile[] = profiles.map(profile => {
+        const userRole = roles?.find(r => r.user_id === profile.user_id);
+        return {
+          id: profile.user_id,
+          email: '', // We don't have access to email from profiles
+          username: profile.username,
+          avatar_url: profile.avatar_url,
+          created_at: profile.created_at,
+          role: userRole?.role as 'admin' | 'moderator' | 'user' | undefined,
+        };
+      });
+
+      return usersWithRoles;
+    },
+  });
+};
+
+export const useAssignRole = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: 'admin' | 'moderator' | 'user' }) => {
+      // First, delete existing role for this user
+      await supabase.from('user_roles').delete().eq('user_id', userId);
+      
+      // Then insert the new role
+      const { data, error } = await supabase
+        .from('user_roles')
+        .insert([{ user_id: userId, role }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      toast({ title: 'Role assigned successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to assign role', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useRemoveRole = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.from('user_roles').delete().eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      toast({ title: 'Role removed successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to remove role', description: error.message, variant: 'destructive' });
     },
   });
 };

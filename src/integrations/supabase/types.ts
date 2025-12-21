@@ -98,6 +98,53 @@ export type Database = {
         }
         Relationships: []
       }
+      lessons: {
+        Row: {
+          course_id: string
+          created_at: string
+          description: string | null
+          duration: string | null
+          id: string
+          is_free: boolean
+          order_index: number
+          title: string
+          updated_at: string
+          youtube_video_id: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          id?: string
+          is_free?: boolean
+          order_index?: number
+          title: string
+          updated_at?: string
+          youtube_video_id?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          id?: string
+          is_free?: boolean
+          order_index?: number
+          title?: string
+          updated_at?: string
+          youtube_video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notes: {
         Row: {
           category: string

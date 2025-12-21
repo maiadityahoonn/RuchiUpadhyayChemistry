@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   Users, BookOpen, Trophy, TrendingUp, Search,
   BarChart3, PieChart, Activity, DollarSign,
-  Settings, Bell, LogOut, Menu, X, FileText, ClipboardList
+  Settings, Bell, LogOut, Menu, X, FileText, ClipboardList, Video, Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import { useIsAdmin, useNotes, useTests, useCoursesList } from '@/hooks/useAdmin
 import AdminNotes from '@/components/admin/AdminNotes';
 import AdminTests from '@/components/admin/AdminTests';
 import AdminCourses from '@/components/admin/AdminCourses';
+import AdminCurriculum from '@/components/admin/AdminCurriculum';
+import AdminUsers from '@/components/admin/AdminUsers';
 
 const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -41,8 +43,10 @@ const AdminDashboard = () => {
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'courses', label: 'Courses', icon: BookOpen },
+    { id: 'curriculum', label: 'Curriculum', icon: Video },
     { id: 'tests', label: 'Tests', icon: ClipboardList },
     { id: 'notes', label: 'Notes', icon: FileText },
+    { id: 'users', label: 'User Roles', icon: Shield },
     { id: 'analytics', label: 'Analytics', icon: PieChart },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -96,10 +100,14 @@ const AdminDashboard = () => {
     switch (activeTab) {
       case 'courses':
         return <AdminCourses />;
+      case 'curriculum':
+        return <AdminCurriculum />;
       case 'tests':
         return <AdminTests />;
       case 'notes':
         return <AdminNotes />;
+      case 'users':
+        return <AdminUsers />;
       case 'overview':
       default:
         return (

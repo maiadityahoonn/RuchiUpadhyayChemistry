@@ -1,0 +1,377 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Plus, Edit, Trash2, Search, PlayCircle, ChevronDown, ChevronRight, GripVertical, Video } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  useCoursesList, 
+  useLessons, 
+  useCreateLesson, 
+  useUpdateLesson, 
+  useDeleteLesson,
+  Course,
+  Lesson 
+} from '@/hooks/useAdmin';
+
+const AdminCurriculum = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    youtube_video_id: '',
+    duration: '',
+    order_index: 0,
+    is_free: false,
+  });
+
+  const { data: courses, isLoading: coursesLoading } = useCoursesList();
+  const { data: lessons, isLoading: lessonsLoading } = useLessons(selectedCourse?.id);
+  const createLesson = useCreateLesson();
+  const updateLesson = useUpdateLesson();
+  const deleteLesson = useDeleteLesson();
+
+  const filteredCourses = courses?.filter(course =>
+    course.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const toggleCourse = (courseId: string) => {
+    const course = courses?.find(c => c.id === courseId);
+    if (course) {
+      setSelectedCourse(course);
+      const newExpanded = new Set(expandedCourses);
+      if (newExpanded.has(courseId)) {
+        newExpanded.delete(courseId);
+      } else {
+        newExpanded.add(courseId);
+      }
+      setExpandedCourses(newExpanded);
+    }
+  };
+
+  const handleOpenDialog = (course: Course, lesson?: Lesson) => {
+    setSelectedCourse(course);
+    if (lesson) {
+      setEditingLesson(lesson);
+      setFormData({
+        title: lesson.title,
+        description: lesson.description || '',
+        youtube_video_id: lesson.youtube_video_id || '',
+        duration: lesson.duration || '',
+        order_index: lesson.order_index,
+        is_free: lesson.is_free,
+      });
+    } else {
+      setEditingLesson(null);
+      const maxOrder = lessons?.reduce((max, l) => Math.max(max, l.order_index), -1) ?? -1;
+      setFormData({
+        title: '',
+        description: '',
+        youtube_video_id: '',
+        duration: '',
+        order_index: maxOrder + 1,
+        is_free: false,
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedCourse) return;
+
+    if (editingLesson) {
+      await updateLesson.mutateAsync({ 
+        id: editingLesson.id, 
+        ...formData,
+        youtube_video_id: formData.youtube_video_id || null,
+        description: formData.description || null,
+        duration: formData.duration || null,
+      });
+    } else {
+      await createLesson.mutateAsync({
+        course_id: selectedCourse.id,
+        ...formData,
+        youtube_video_id: formData.youtube_video_id || null,
+        description: formData.description || null,
+        duration: formData.duration || null,
+      });
+    }
+    
+    setIsDialogOpen(false);
+    setEditingLesson(null);
+  };
+
+  const handleDelete = async (lesson: Lesson) => {
+    if (confirm('Are you sure you want to delete this lesson?')) {
+      await deleteLesson.mutateAsync({ id: lesson.id, courseId: lesson.course_id });
+    }
+  };
+
+  const extractYouTubeId = (input: string) => {
+    // If it's already just an ID, return it
+    if (/^[a-zA-Z0-9_-]{11}$/.test(input)) {
+      return input;
+    }
+    // Try to extract from URL
+    const regex = /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
+    const match = input.match(regex);
+    return match ? match[1] : input;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search courses..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      {/* Courses with Lessons */}
+      <div className="space-y-4">
+        {coursesLoading ? (
+          <div className="bg-card rounded-2xl border border-border p-8 text-center text-muted-foreground">
+            Loading courses...
+          </div>
+        ) : filteredCourses && filteredCourses.length > 0 ? (
+          filteredCourses.map((course) => (
+            <motion.div
+              key={course.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-card rounded-2xl border border-border overflow-hidden"
+            >
+              {/* Course Header */}
+              <div 
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-secondary/30 transition-colors"
+                onClick={() => toggleCourse(course.id)}
+              >
+                <div className="flex items-center gap-3">
+                  <button className="p-1">
+                    {expandedCourses.has(course.id) ? (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </button>
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <PlayCircle className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-card-foreground">{course.title}</p>
+                    <p className="text-sm text-muted-foreground">{course.lessons} lessons • {course.duration}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant="secondary">{course.category}</Badge>
+                  <Badge variant={course.is_active ? 'default' : 'secondary'}>
+                    {course.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Lessons List */}
+              {expandedCourses.has(course.id) && (
+                <div className="border-t border-border">
+                  <div className="p-4 bg-secondary/20">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-medium text-card-foreground">Curriculum</h3>
+                      <Button size="sm" variant="gradient" onClick={() => handleOpenDialog(course)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Lesson
+                      </Button>
+                    </div>
+
+                    {selectedCourse?.id === course.id && lessonsLoading ? (
+                      <p className="text-center text-muted-foreground py-4">Loading lessons...</p>
+                    ) : lessons && lessons.length > 0 ? (
+                      <div className="space-y-2">
+                        {lessons.map((lesson, index) => (
+                          <div
+                            key={lesson.id}
+                            className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border group hover:border-primary/50 transition-colors"
+                          >
+                            <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
+                            <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                              {index + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-card-foreground truncate">{lesson.title}</p>
+                                {lesson.is_free && (
+                                  <Badge variant="secondary" className="text-xs">Free</Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {lesson.youtube_video_id && (
+                                  <span className="flex items-center gap-1">
+                                    <Video className="w-3 h-3" />
+                                    {lesson.youtube_video_id}
+                                  </span>
+                                )}
+                                {lesson.duration && <span>• {lesson.duration}</span>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(course, lesson)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-destructive"
+                                onClick={() => handleDelete(lesson)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-muted-foreground py-4">
+                        No lessons yet. Add your first lesson!
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ))
+        ) : (
+          <div className="bg-card rounded-2xl border border-border p-8 text-center text-muted-foreground">
+            No courses found. Create courses first to add lessons.
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit Lesson Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingLesson ? 'Edit Lesson' : 'Add New Lesson'}
+              {selectedCourse && (
+                <span className="text-muted-foreground font-normal"> - {selectedCourse.title}</span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Lesson Title</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter lesson title"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Enter lesson description"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="youtube_video_id">YouTube Video ID or URL</Label>
+                <Input
+                  id="youtube_video_id"
+                  value={formData.youtube_video_id}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    youtube_video_id: extractYouTubeId(e.target.value) 
+                  })}
+                  placeholder="e.g., dQw4w9WgXcQ or full URL"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Paste a YouTube URL or just the video ID
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration</Label>
+                <Input
+                  id="duration"
+                  value={formData.duration}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                  placeholder="e.g., 15:30"
+                />
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="order_index">Order</Label>
+                <Input
+                  id="order_index"
+                  type="number"
+                  value={formData.order_index}
+                  onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })}
+                  min={0}
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-6">
+                <Switch
+                  checked={formData.is_free}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_free: checked })}
+                />
+                <Label>Free Preview</Label>
+              </div>
+            </div>
+
+            {formData.youtube_video_id && (
+              <div className="space-y-2">
+                <Label>Preview</Label>
+                <div className="aspect-video rounded-lg overflow-hidden bg-secondary">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${formData.youtube_video_id}`}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-border">
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="gradient" disabled={createLesson.isPending || updateLesson.isPending}>
+                {editingLesson ? 'Update' : 'Add'} Lesson
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default AdminCurriculum;
