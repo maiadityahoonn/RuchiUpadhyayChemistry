@@ -1,19 +1,43 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { Star, Clock, Users, Zap, BookOpen } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Star, Clock, Users, Zap, BookOpen, CheckCircle, Loader2, Play } from 'lucide-react';
 import { Course } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { useCourses } from '@/hooks/useCourses';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CourseCardProps {
   course: Course;
   index?: number;
+  showProgress?: boolean;
 }
 
-const CourseCard = ({ course, index = 0 }: CourseCardProps) => {
+const CourseCard = ({ course, index = 0, showProgress = false }: CourseCardProps) => {
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const { enrollInCourse, isEnrolled, getProgress } = useCourses();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  const enrolled = isEnrolled(course.id);
+  const progress = getProgress(course.id);
+
   const discount = course.originalPrice 
     ? Math.round((1 - course.price / course.originalPrice) * 100) 
     : 0;
+
+  const handleEnroll = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    
+    setIsEnrolling(true);
+    await enrollInCourse(course.id);
+    setIsEnrolling(false);
+  };
 
   return (
     <motion.div
@@ -34,7 +58,13 @@ const CourseCard = ({ course, index = 0 }: CourseCardProps) => {
           
           {/* Badges */}
           <div className="absolute top-4 left-4 flex gap-2">
-            {discount > 0 && (
+            {enrolled && (
+              <Badge className="bg-success text-success-foreground">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                Enrolled
+              </Badge>
+            )}
+            {!enrolled && discount > 0 && (
               <Badge className="bg-accent text-accent-foreground">
                 {discount}% OFF
               </Badge>
@@ -66,6 +96,17 @@ const CourseCard = ({ course, index = 0 }: CourseCardProps) => {
             {course.description}
           </p>
 
+          {/* Progress Bar for enrolled courses */}
+          {enrolled && (showProgress || progress > 0) && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="font-semibold text-primary">{progress}%</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+            </div>
+          )}
+
           {/* Stats */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
@@ -94,19 +135,43 @@ const CourseCard = ({ course, index = 0 }: CourseCardProps) => {
 
           {/* Price & CTA */}
           <div className="flex items-center justify-between pt-4 border-t border-border">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-card-foreground">${course.price}</span>
-              {course.originalPrice && (
-                <span className="text-sm text-muted-foreground line-through">
-                  ${course.originalPrice}
-                </span>
-              )}
-            </div>
-            <Link to={`/courses/${course.id}`}>
-              <Button variant="gradient" size="sm">
-                Enroll Now
-              </Button>
-            </Link>
+            {!enrolled ? (
+              <>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-card-foreground">${course.price}</span>
+                  {course.originalPrice && (
+                    <span className="text-sm text-muted-foreground line-through">
+                      ${course.originalPrice}
+                    </span>
+                  )}
+                </div>
+                <Button 
+                  variant="gradient" 
+                  size="sm" 
+                  onClick={handleEnroll}
+                  disabled={isEnrolling}
+                >
+                  {isEnrolling ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Enrolling...
+                    </>
+                  ) : (
+                    'Enroll Now'
+                  )}
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="text-sm text-muted-foreground">
+                  {progress === 100 ? 'Completed!' : `${course.lessons - Math.floor(course.lessons * progress / 100)} lessons left`}
+                </div>
+                <Button variant="gradient" size="sm">
+                  <Play className="w-4 h-4 mr-1" />
+                  {progress > 0 ? 'Continue' : 'Start'}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
