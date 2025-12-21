@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import ruchiLogo from '@/assets/ruchi-logo.png';
 
 const navLinks = [
   { name: 'Home', path: '/' },
@@ -50,7 +51,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-xl font-heading font-bold text-primary">EduLearn</span>
+            <img src={ruchiLogo} alt="Logo" className="h-10 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}
