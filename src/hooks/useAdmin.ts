@@ -8,6 +8,7 @@ export interface Note {
   title: string;
   content: string;
   category: string;
+  file_url: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -464,6 +465,78 @@ export const useDeleteLesson = () => {
     },
     onError: (error: Error) => {
       toast({ title: 'Failed to delete lesson', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useReorderLessons = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ lessons, courseId }: { lessons: { id: string; order_index: number }[]; courseId: string }) => {
+      const updates = lessons.map(lesson => 
+        supabase
+          .from('lessons')
+          .update({ order_index: lesson.order_index })
+          .eq('id', lesson.id)
+      );
+      
+      await Promise.all(updates);
+      return courseId;
+    },
+    onSuccess: (courseId) => {
+      queryClient.invalidateQueries({ queryKey: ['lessons', courseId] });
+      toast({ title: 'Lessons reordered successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to reorder lessons', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useUploadNoteFile = () => {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('notes')
+        .upload(fileName, file);
+      
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('notes')
+        .getPublicUrl(fileName);
+      
+      return publicUrl;
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to upload file', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useDeleteNoteFile = () => {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (fileUrl: string) => {
+      const fileName = fileUrl.split('/').pop();
+      if (!fileName) throw new Error('Invalid file URL');
+      
+      const { error } = await supabase.storage
+        .from('notes')
+        .remove([fileName]);
+      
+      if (error) throw error;
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to delete file', description: error.message, variant: 'destructive' });
     },
   });
 };

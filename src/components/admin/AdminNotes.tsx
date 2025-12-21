@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Search, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, FileText, Upload, X, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,23 +8,29 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { useNotes, useCreateNote, useUpdateNote, useDeleteNote, Note } from '@/hooks/useAdmin';
+import { useNotes, useCreateNote, useUpdateNote, useDeleteNote, useUploadNoteFile, useDeleteNoteFile, Note } from '@/hooks/useAdmin';
 import { courseCategories } from '@/data/mockData';
 
 const AdminNotes = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     content: '',
     category: '',
+    file_url: null as string | null,
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: notes, isLoading } = useNotes();
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
+  const uploadFile = useUploadNoteFile();
+  const deleteFile = useDeleteNoteFile();
 
   const filteredNotes = notes?.filter(note =>
     note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -38,33 +44,91 @@ const AdminNotes = () => {
         title: note.title,
         content: note.content,
         category: note.category,
+        file_url: note.file_url,
       });
     } else {
       setEditingNote(null);
-      setFormData({ title: '', content: '', category: '' });
+      setFormData({ title: '', content: '', category: '', file_url: null });
     }
+    setSelectedFile(null);
     setIsDialogOpen(true);
+  };
+
+  const handleFileSelect = (file: File) => {
+    if (file.type !== 'application/pdf') {
+      alert('Please upload a PDF file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+    setSelectedFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleRemoveFile = async () => {
+    if (formData.file_url) {
+      await deleteFile.mutateAsync(formData.file_url);
+    }
+    setFormData({ ...formData, file_url: null });
+    setSelectedFile(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    let fileUrl = formData.file_url;
+    
+    if (selectedFile) {
+      fileUrl = await uploadFile.mutateAsync(selectedFile);
+    }
+    
+    const noteData = {
+      title: formData.title,
+      content: formData.content,
+      category: formData.category,
+      file_url: fileUrl,
+    };
+
     if (editingNote) {
-      await updateNote.mutateAsync({ id: editingNote.id, ...formData });
+      await updateNote.mutateAsync({ id: editingNote.id, ...noteData });
     } else {
-      await createNote.mutateAsync(formData);
+      await createNote.mutateAsync(noteData);
     }
     
     setIsDialogOpen(false);
-    setFormData({ title: '', content: '', category: '' });
+    setFormData({ title: '', content: '', category: '', file_url: null });
+    setSelectedFile(null);
     setEditingNote(null);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (note: Note) => {
     if (confirm('Are you sure you want to delete this note?')) {
-      await deleteNote.mutateAsync(id);
+      if (note.file_url) {
+        await deleteFile.mutateAsync(note.file_url);
+      }
+      await deleteNote.mutateAsync(note.id);
     }
   };
+
+  const isPending = createNote.isPending || updateNote.isPending || uploadFile.isPending;
 
   return (
     <div className="space-y-6">
@@ -87,7 +151,7 @@ const AdminNotes = () => {
               Add Note
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingNote ? 'Edit Note' : 'Create New Note'}</DialogTitle>
             </DialogHeader>
@@ -121,15 +185,83 @@ const AdminNotes = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* PDF Upload */}
+              <div className="space-y-2">
+                <Label>PDF Document (Optional)</Label>
+                {(selectedFile || formData.file_url) ? (
+                  <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg border border-border">
+                    <FileText className="w-8 h-8 text-primary" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-card-foreground truncate">
+                        {selectedFile?.name || 'Uploaded PDF'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedFile 
+                          ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB` 
+                          : 'Click to view'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {formData.file_url && !selectedFile && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => window.open(formData.file_url!, '_blank')}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive"
+                        onClick={handleRemoveFile}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                      isDragging 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Drag & drop a PDF file here, or click to browse
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Maximum file size: 10MB
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+                    />
+                  </div>
+                )}
+              </div>
               
               <div className="space-y-2">
-                <Label htmlFor="content">Content</Label>
+                <Label htmlFor="content">Content / Description</Label>
                 <Textarea
                   id="content"
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="Enter note content"
-                  rows={8}
+                  placeholder="Enter note content or description"
+                  rows={6}
                   required
                 />
               </div>
@@ -138,8 +270,8 @@ const AdminNotes = () => {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" variant="gradient" disabled={createNote.isPending || updateNote.isPending}>
-                  {editingNote ? 'Update' : 'Create'} Note
+                <Button type="submit" variant="gradient" disabled={isPending}>
+                  {isPending ? 'Saving...' : editingNote ? 'Update' : 'Create'} Note
                 </Button>
               </div>
             </form>
@@ -155,6 +287,7 @@ const AdminNotes = () => {
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Title</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Category</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">File</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Created</th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -162,7 +295,7 @@ const AdminNotes = () => {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                     Loading notes...
                   </td>
                 </tr>
@@ -188,6 +321,21 @@ const AdminNotes = () => {
                     <td className="px-6 py-4">
                       <Badge variant="secondary">{note.category}</Badge>
                     </td>
+                    <td className="px-6 py-4">
+                      {note.file_url ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(note.file_url!, '_blank')}
+                          className="text-primary"
+                        >
+                          <FileText className="w-4 h-4 mr-1" />
+                          View PDF
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No file</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">
                       {new Date(note.created_at).toLocaleDateString()}
                     </td>
@@ -200,7 +348,7 @@ const AdminNotes = () => {
                           variant="ghost" 
                           size="icon" 
                           className="text-destructive"
-                          onClick={() => handleDelete(note.id)}
+                          onClick={() => handleDelete(note)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -210,7 +358,7 @@ const AdminNotes = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                     No notes found. Create your first note!
                   </td>
                 </tr>

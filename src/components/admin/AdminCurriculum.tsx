@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Search, PlayCircle, ChevronDown, ChevronRight, GripVertical, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,13 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   useCoursesList, 
   useLessons, 
   useCreateLesson, 
   useUpdateLesson, 
   useDeleteLesson,
+  useReorderLessons,
   Course,
   Lesson 
 } from '@/hooks/useAdmin';
@@ -25,6 +25,8 @@ const AdminCurriculum = () => {
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const [draggedLesson, setDraggedLesson] = useState<Lesson | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -39,6 +41,7 @@ const AdminCurriculum = () => {
   const createLesson = useCreateLesson();
   const updateLesson = useUpdateLesson();
   const deleteLesson = useDeleteLesson();
+  const reorderLessons = useReorderLessons();
 
   const filteredCourses = courses?.filter(course =>
     course.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -119,14 +122,65 @@ const AdminCurriculum = () => {
   };
 
   const extractYouTubeId = (input: string) => {
-    // If it's already just an ID, return it
     if (/^[a-zA-Z0-9_-]{11}$/.test(input)) {
       return input;
     }
-    // Try to extract from URL
     const regex = /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
     const match = input.match(regex);
     return match ? match[1] : input;
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, lesson: Lesson) => {
+    setDraggedLesson(lesson);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', lesson.id);
+  };
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  }, []);
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = useCallback(async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+    
+    if (!draggedLesson || !lessons || !selectedCourse) return;
+    
+    const sourceIndex = lessons.findIndex(l => l.id === draggedLesson.id);
+    if (sourceIndex === targetIndex) {
+      setDraggedLesson(null);
+      return;
+    }
+
+    // Create new order
+    const newLessons = [...lessons];
+    const [removed] = newLessons.splice(sourceIndex, 1);
+    newLessons.splice(targetIndex, 0, removed);
+
+    // Update order indices
+    const updates = newLessons.map((lesson, index) => ({
+      id: lesson.id,
+      order_index: index,
+    }));
+
+    await reorderLessons.mutateAsync({
+      lessons: updates,
+      courseId: selectedCourse.id,
+    });
+
+    setDraggedLesson(null);
+  }, [draggedLesson, lessons, selectedCourse, reorderLessons]);
+
+  const handleDragEnd = () => {
+    setDraggedLesson(null);
+    setDragOverIndex(null);
   };
 
   return (
@@ -192,7 +246,10 @@ const AdminCurriculum = () => {
                 <div className="border-t border-border">
                   <div className="p-4 bg-secondary/20">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-card-foreground">Curriculum</h3>
+                      <div>
+                        <h3 className="font-medium text-card-foreground">Curriculum</h3>
+                        <p className="text-xs text-muted-foreground mt-1">Drag lessons to reorder</p>
+                      </div>
                       <Button size="sm" variant="gradient" onClick={() => handleOpenDialog(course)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Add Lesson
@@ -206,9 +263,21 @@ const AdminCurriculum = () => {
                         {lessons.map((lesson, index) => (
                           <div
                             key={lesson.id}
-                            className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border group hover:border-primary/50 transition-colors"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, lesson)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, index)}
+                            onDragEnd={handleDragEnd}
+                            className={`flex items-center gap-3 p-3 bg-card rounded-lg border group transition-all ${
+                              draggedLesson?.id === lesson.id
+                                ? 'opacity-50 border-primary'
+                                : dragOverIndex === index
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50'
+                            }`}
                           >
-                            <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
+                            <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
                             <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
                               {index + 1}
                             </span>
