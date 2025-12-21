@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { mockCourses } from '@/data/mockData';
 
-const categories = ['All', 'Web Development', 'Data Science', 'Design', 'Cloud Computing', 'Marketing'];
+const categories = ['All', 'Class 10', 'Class 12', 'IIT-JEE', 'NEET', 'Engineering Chemistry', 'Environmental Science'];
 const levels = ['All Levels', 'Beginner', 'Intermediate', 'Advanced'];
 
 const Courses = () => {

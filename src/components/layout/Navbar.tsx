@@ -3,21 +3,33 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Menu, X, BookOpen, Trophy, User, LogIn, 
-  Flame, Zap, ChevronDown, LayoutDashboard, LogOut 
+  Flame, Zap, ChevronDown, LayoutDashboard, LogOut,
+  GraduationCap, Target, Stethoscope, Cog, Leaf
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import ruchiLogo from '@/assets/ruchi-logo.png';
 
 const navLinks = [
   { name: 'Home', path: '/' },
-  { name: 'Courses', path: '/courses' },
+  { name: 'All Courses', path: '/courses' },
   { name: 'Tests', path: '/tests' },
   { name: 'Leaderboard', path: '/leaderboard' },
+];
+
+const categoryLinks = [
+  { name: 'Class 10', path: '/courses/class-10', icon: BookOpen },
+  { name: 'Class 12', path: '/courses/class-12', icon: GraduationCap },
+  { name: 'IIT-JEE', path: '/courses/iit-jee', icon: Target },
+  { name: 'NEET', path: '/courses/neet', icon: Stethoscope },
+  { name: 'Engineering', path: '/courses/engineering', icon: Cog },
+  { name: 'Environmental', path: '/courses/environmental', icon: Leaf },
 ];
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
@@ -47,16 +59,14 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
-              <BookOpen className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-heading font-bold text-foreground">
-              Edu<span className="text-primary">Tech</span>
+            <img src={ruchiLogo} alt="Ruchi Upadhyay Chemistry" className="h-10 w-auto" />
+            <span className="text-lg font-heading font-bold text-foreground hidden sm:block">
+              Ruchi <span className="text-primary">Chemistry</span>
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
@@ -76,6 +86,46 @@ const Navbar = () => {
                 )}
               </Link>
             ))}
+
+            {/* Categories Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setCategoriesOpen(!categoriesOpen)}
+                onMouseEnter={() => setCategoriesOpen(true)}
+                className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary ${
+                  location.pathname.startsWith('/courses/') && location.pathname !== '/courses'
+                    ? 'text-primary'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                Categories
+                <ChevronDown className={`w-4 h-4 transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {categoriesOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    onMouseLeave={() => setCategoriesOpen(false)}
+                    className="absolute top-full left-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-xl py-2 z-50"
+                  >
+                    {categoryLinks.map((cat) => (
+                      <Link
+                        key={cat.path}
+                        to={cat.path}
+                        onClick={() => setCategoriesOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-card-foreground hover:bg-secondary transition-colors"
+                      >
+                        <cat.icon className="w-4 h-4 text-primary" />
+                        {cat.name}
+                      </Link>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Desktop Actions */}
@@ -138,7 +188,7 @@ const Navbar = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden overflow-hidden"
+              className="md:hidden overflow-hidden bg-card"
             >
               <div className="py-4 space-y-2">
                 {navLinks.map((link) => (
@@ -155,7 +205,28 @@ const Navbar = () => {
                     {link.name}
                   </Link>
                 ))}
-                <div className="pt-4 space-y-2">
+
+                {/* Mobile Categories */}
+                <div className="px-4 py-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Categories
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {categoryLinks.map((cat) => (
+                      <Link
+                        key={cat.path}
+                        to={cat.path}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-secondary transition-colors"
+                      >
+                        <cat.icon className="w-4 h-4 text-primary" />
+                        {cat.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 space-y-2 px-4">
                   {user ? (
                     <>
                       <Link to="/dashboard" onClick={() => setIsOpen(false)}>
