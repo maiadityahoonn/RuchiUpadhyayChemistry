@@ -15,6 +15,7 @@ const navLinks = [
   { name: 'All Courses', path: '/courses' },
   { name: 'Tests', path: '/tests' },
   { name: 'Leaderboard', path: '/leaderboard' },
+  { name: 'Contact', path: '/contact' },
 ];
 
 const categoryLinks = [
