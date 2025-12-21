@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import banner1 from '@/assets/banner1.png';
+import banner2 from '@/assets/banner2.png';
+import banner3 from '@/assets/banner3.png';
+import banner4 from '@/assets/banner4.png';
 
 const bannerSlides = [
   { id: 1, image: banner1 },
-  { id: 2, image: banner1 },
-  { id: 3, image: banner1 },
+  { id: 2, image: banner2 },
+  { id: 3, image: banner3 },
+  { id: 4, image: banner4 },
 ];
 
 const HeroBannerCarousel = () => {
