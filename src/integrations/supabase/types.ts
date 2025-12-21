@@ -71,6 +71,33 @@ export type Database = {
         }
         Relationships: []
       }
+      lesson_progress: {
+        Row: {
+          completed_at: string
+          course_id: string
+          id: string
+          lesson_index: number
+          section_index: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          course_id: string
+          id?: string
+          lesson_index: number
+          section_index: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          course_id?: string
+          id?: string
+          lesson_index?: number
+          section_index?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       notes: {
         Row: {
           category: string
