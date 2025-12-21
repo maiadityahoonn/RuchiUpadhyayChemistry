@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   Star, Clock, Users, Zap, BookOpen, CheckCircle, Loader2, Play,
   ChevronLeft, Award, Target, FileText, Video, ArrowRight,
-  GraduationCap, Calendar, Globe, Shield
+  GraduationCap, Calendar, Globe, Shield, Coins
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -15,17 +15,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import CourseFAQ from '@/components/courses/CourseFAQ';
+import CheckoutModal from '@/components/checkout/CheckoutModal';
 import { useCourses } from '@/hooks/useCourses';
 import { useCoursesList } from '@/hooks/useAdmin';
 import { useAuth } from '@/contexts/AuthContext';
+import { useReferrals } from '@/hooks/useReferrals';
 import { mockCourses } from '@/data/mockData';
+
+const POINTS_PER_RUPEE = 10;
 
 const CourseDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isEnrolling, setIsEnrolling] = useState(false);
-  const { enrollInCourse, isEnrolled, getProgress } = useCourses();
+  const [showCheckout, setShowCheckout] = useState(false);
+  const { enrollInCourse, isEnrolled, getProgress, refetch } = useCourses();
   const { user } = useAuth();
+  const { rewardPoints } = useReferrals();
   const { data: dbCourses } = useCoursesList();
 
   // Try to find course in database first, then mock data
@@ -72,13 +78,21 @@ const CourseDetails = () => {
     ? Math.round((1 - course.price / course.originalPrice) * 100) 
     : 0;
 
-  const handleEnroll = async () => {
+  // Calculate potential points discount
+  const maxPointsDiscount = Math.floor(Math.min(rewardPoints, course.price * POINTS_PER_RUPEE * 0.5) / POINTS_PER_RUPEE);
+
+  const handleEnrollClick = () => {
     if (!user) {
       navigate('/login');
       return;
     }
+    setShowCheckout(true);
+  };
+
+  const handleEnrollSuccess = async () => {
     setIsEnrolling(true);
     await enrollInCourse(course.id);
+    refetch();
     setIsEnrolling(false);
   };
 
@@ -249,12 +263,24 @@ const CourseDetails = () => {
                             <span className="font-semibold">Earn +{course.xpReward} XP on completion</span>
                           </div>
                         </div>
+
+                        {/* Points Discount Preview */}
+                        {user && rewardPoints > 0 && maxPointsDiscount > 0 && (
+                          <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg p-3 border border-primary/20">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Coins className="w-4 h-4 text-primary" />
+                              <span className="text-foreground">
+                                Use points for up to <span className="font-semibold text-primary">₹{maxPointsDiscount}</span> off!
+                              </span>
+                            </div>
+                          </div>
+                        )}
                         
                         <Button 
                           variant="gradient" 
                           size="lg" 
                           className="w-full"
-                          onClick={handleEnroll}
+                          onClick={handleEnrollClick}
                           disabled={isEnrolling}
                         >
                           {isEnrolling ? (
@@ -448,6 +474,21 @@ const CourseDetails = () => {
       </main>
 
       <Footer />
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        open={showCheckout}
+        onOpenChange={setShowCheckout}
+        course={{
+          id: course.id,
+          title: course.title,
+          price: course.price,
+          originalPrice: course.originalPrice,
+          xpReward: course.xpReward,
+          instructor: course.instructor,
+        }}
+        onEnrollSuccess={handleEnrollSuccess}
+      />
     </div>
   );
 };
