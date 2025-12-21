@@ -1,15 +1,16 @@
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Twitter, Facebook, Instagram, Linkedin, Youtube } from 'lucide-react';
+import ruchiLogo from '@/assets/ruchi-logo.png';
 
 const Footer = () => {
   return (
     <footer className="bg-foreground text-background">
       <div className="container mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="space-y-6">
             <Link to="/" className="flex items-center gap-3">
-              <span className="text-2xl font-heading font-bold text-primary">EduLearn</span>
+              <img src={ruchiLogo} alt="Logo" className="h-12 w-auto" />
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed">
               Your gateway to quality education. Learn from expert instructors and achieve your academic goals.
@@ -55,6 +56,26 @@ const Footer = () => {
             </ul>
           </div>
 
+          {/* Categories */}
+          <div>
+            <h4 className="font-heading font-semibold text-lg mb-6">Categories</h4>
+            <ul className="space-y-3">
+              {[
+                { name: 'Class 10', path: '/courses/class-10' },
+                { name: 'Class 12', path: '/courses/class-12' },
+                { name: 'IIT-JEE', path: '/courses/iit-jee' },
+                { name: 'NEET', path: '/courses/neet' },
+                { name: 'Engineering', path: '/courses/engineering' },
+                { name: 'Environmental', path: '/courses/environmental' },
+              ].map((item) => (
+                <li key={item.name}>
+                  <Link to={item.path} className="text-muted-foreground hover:text-primary transition-colors text-sm">
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
           {/* Contact */}
           <div>
             <h4 className="font-heading font-semibold text-lg mb-6">Contact Us</h4>
@@ -79,10 +100,9 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-background/10 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-muted-foreground text-sm">
-            © 2024 EduLearn. All rights reserved.
+            © 2024 All rights reserved.
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-muted-foreground hover:text-primary text-sm">Privacy Policy</a>
