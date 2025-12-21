@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, BookOpen, ArrowRight, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ruchiLogo from '@/assets/ruchi-logo.png';
 import { useAuth } from '@/contexts/AuthContext';
 import { z } from 'zod';
 
@@ -87,13 +88,8 @@ const Login = () => {
           className="w-full max-w-md space-y-8"
         >
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
-              <BookOpen className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <span className="text-2xl font-heading font-bold text-foreground">
-              Edu<span className="text-primary">Tech</span>
-            </span>
+          <Link to="/" className="flex items-center">
+            <img src={ruchiLogo} alt="Ruchi Chemistry" className="h-14 w-auto" />
           </Link>
 
           {/* Header */}
