@@ -17,6 +17,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import CourseFAQ from '@/components/courses/CourseFAQ';
 import CheckoutModal from '@/components/checkout/CheckoutModal';
 import CourseCertificate from '@/components/certificate/CourseCertificate';
+import VideoPlayer from '@/components/courses/VideoPlayer';
 import { useCourses } from '@/hooks/useCourses';
 import { useLessonProgress } from '@/hooks/useLessonProgress';
 import { useCoursesList } from '@/hooks/useAdmin';
@@ -24,6 +25,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useReferrals } from '@/hooks/useReferrals';
 import { mockCourses } from '@/data/mockData';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
 
 const POINTS_PER_RUPEE = 10;
 
@@ -32,10 +34,12 @@ const CourseDetails = () => {
   const navigate = useNavigate();
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [currentVideo, setCurrentVideo] = useState<{ videoId: string; title: string; sectionIndex: number; lessonIndex: number } | null>(null);
   const { enrollInCourse, isEnrolled, getProgress, getCompletedAt, refetch } = useCourses();
   const { user, profile } = useAuth();
   const { rewardPoints } = useReferrals();
   const { data: dbCourses } = useCoursesList();
+  const { toast } = useToast();
 
   // Try to find course in database first, then mock data
   const dbCourse = dbCourses?.find(c => c.id === id);
@@ -99,41 +103,83 @@ const CourseDetails = () => {
     setIsEnrolling(false);
   };
 
-  // Generate sample curriculum based on lessons count
+  // Generate sample curriculum with YouTube video IDs
+  // Replace these with actual unlisted YouTube video IDs
   const curriculum = [
     {
       title: 'Introduction',
       lessons: [
-        { title: 'Welcome to the Course', duration: '5 min', type: 'video' },
-        { title: 'Course Overview', duration: '10 min', type: 'video' },
-        { title: 'Setting Up Your Environment', duration: '15 min', type: 'video' },
+        { title: 'Welcome to the Course', duration: '5 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
+        { title: 'Course Overview', duration: '10 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
+        { title: 'Setting Up Your Environment', duration: '15 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
       ],
     },
     {
       title: 'Core Concepts',
       lessons: [
-        { title: 'Understanding the Basics', duration: '20 min', type: 'video' },
-        { title: 'Key Principles & Theory', duration: '25 min', type: 'video' },
-        { title: 'Practice Problems Set 1', duration: '30 min', type: 'quiz' },
+        { title: 'Understanding the Basics', duration: '20 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
+        { title: 'Key Principles & Theory', duration: '25 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
+        { title: 'Practice Problems Set 1', duration: '30 min', type: 'quiz', videoId: '' },
       ],
     },
     {
       title: 'Advanced Topics',
       lessons: [
-        { title: 'Deep Dive into Concepts', duration: '30 min', type: 'video' },
-        { title: 'Real-World Applications', duration: '25 min', type: 'video' },
-        { title: 'Case Studies', duration: '20 min', type: 'reading' },
+        { title: 'Deep Dive into Concepts', duration: '30 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
+        { title: 'Real-World Applications', duration: '25 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
+        { title: 'Case Studies', duration: '20 min', type: 'reading', videoId: '' },
       ],
     },
     {
       title: 'Final Assessment',
       lessons: [
-        { title: 'Comprehensive Review', duration: '20 min', type: 'video' },
-        { title: 'Final Exam', duration: '60 min', type: 'quiz' },
-        { title: 'Certificate of Completion', duration: '5 min', type: 'certificate' },
+        { title: 'Comprehensive Review', duration: '20 min', type: 'video', videoId: 'dQw4w9WgXcQ' },
+        { title: 'Final Exam', duration: '60 min', type: 'quiz', videoId: '' },
+        { title: 'Certificate of Completion', duration: '5 min', type: 'certificate', videoId: '' },
       ],
     },
   ];
+
+  const handleLessonClick = (sectionIndex: number, lessonIndex: number, lesson: typeof curriculum[0]['lessons'][0]) => {
+    if (!enrolled) {
+      toast({
+        title: 'Enrollment Required',
+        description: 'Please enroll in this course to watch lessons.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (lesson.type === 'video' && lesson.videoId) {
+      setCurrentVideo({
+        videoId: lesson.videoId,
+        title: lesson.title,
+        sectionIndex,
+        lessonIndex,
+      });
+    } else if (lesson.type === 'quiz') {
+      toast({
+        title: 'Quiz',
+        description: 'Quiz functionality coming soon!',
+      });
+    } else if (lesson.type === 'reading') {
+      toast({
+        title: 'Reading Material',
+        description: 'Reading materials coming soon!',
+      });
+    } else if (lesson.type === 'certificate') {
+      toast({
+        title: 'Certificate',
+        description: 'Complete all lessons to unlock your certificate!',
+      });
+    }
+  };
+
+  const handleVideoComplete = () => {
+    if (currentVideo) {
+      toggleLessonComplete(currentVideo.sectionIndex, currentVideo.lessonIndex);
+    }
+  };
 
   // Calculate total lessons from curriculum
   const totalLessons = curriculum.reduce((acc, section) => acc + section.lessons.length, 0);
@@ -394,17 +440,19 @@ const CourseDetails = () => {
                               return (
                                 <div 
                                   key={lIndex}
-                                  className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                                  onClick={() => handleLessonClick(sIndex, lIndex, lesson)}
+                                  className={`flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer ${
                                     lessonCompleted 
                                       ? 'bg-success/10 border border-success/20' 
                                       : 'hover:bg-secondary/50'
-                                  }`}
+                                  } ${enrolled && lesson.type === 'video' ? 'hover:border-primary/50 hover:border' : ''}`}
                                 >
                                   <div className="flex items-center gap-3">
                                     {enrolled && (
                                       <Checkbox
                                         checked={lessonCompleted}
                                         onCheckedChange={() => toggleLessonComplete(sIndex, lIndex)}
+                                        onClick={(e) => e.stopPropagation()}
                                         className="data-[state=checked]:bg-success data-[state=checked]:border-success"
                                       />
                                     )}
@@ -417,6 +465,9 @@ const CourseDetails = () => {
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
+                                    {enrolled && lesson.type === 'video' && !lessonCompleted && (
+                                      <Play className="w-4 h-4 text-primary" />
+                                    )}
                                     {lessonCompleted && (
                                       <CheckCircle className="w-4 h-4 text-success" />
                                     )}
@@ -542,6 +593,17 @@ const CourseDetails = () => {
         }}
         onEnrollSuccess={handleEnrollSuccess}
       />
+
+      {/* Video Player Modal */}
+      {currentVideo && (
+        <VideoPlayer
+          videoId={currentVideo.videoId}
+          title={currentVideo.title}
+          isOpen={!!currentVideo}
+          onClose={() => setCurrentVideo(null)}
+          onComplete={handleVideoComplete}
+        />
+      )}
     </div>
   );
 };
