@@ -1,29 +1,77 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Grid, List, BookOpen } from 'lucide-react';
+import { Search, Grid, List, BookOpen, Loader2 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import CourseCard from '@/components/courses/CourseCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { mockCourses } from '@/data/mockData';
+import { useCoursesList } from '@/hooks/useAdmin';
+import { supabase } from '@/integrations/supabase/client';
+import { Course, CourseCategory } from '@/types';
 
 const categories = ['All', 'Class 10', 'Class 12', 'IIT-JEE', 'NEET', 'Engineering Chemistry', 'Environmental Science'];
 const levels = ['All Levels', 'Beginner', 'Intermediate', 'Advanced'];
+
+const validCategories: CourseCategory[] = ['Class 10', 'Class 12', 'IIT-JEE', 'NEET', 'Engineering Chemistry', 'Environmental Science'];
 
 const Courses = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedLevel, setSelectedLevel] = useState('All Levels');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  const { data: dbCourses, isLoading } = useCoursesList();
 
-  const filteredCourses = mockCourses.filter((course) => {
+  // Transform database courses to Course type
+  const courses: Course[] = (dbCourses || [])
+    .filter(course => validCategories.includes(course.category as CourseCategory))
+    .map(course => ({
+      id: course.id,
+      title: course.title,
+      description: course.description || '',
+      instructor: course.instructor,
+      price: course.price,
+      originalPrice: course.original_price || undefined,
+      image: course.image_url || '/placeholder.svg',
+      category: course.category as CourseCategory,
+      duration: course.duration || '0 hours',
+      lessons: course.lessons,
+      level: course.level as 'Beginner' | 'Intermediate' | 'Advanced',
+      rating: 4.8,
+      students: 0,
+      xpReward: course.xp_reward,
+    }));
+
+  const filteredCourses = courses.filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || course.category === selectedCategory;
     const matchesLevel = selectedLevel === 'All Levels' || course.level === selectedLevel;
     return matchesSearch && matchesCategory && matchesLevel;
   });
+
+  // Set up realtime subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('courses-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'courses'
+        },
+        () => {
+          // The useCoursesList hook will automatically refetch
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -131,7 +179,11 @@ const Courses = () => {
               </div>
             </div>
 
-            {filteredCourses.length > 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : filteredCourses.length > 0 ? (
               <div className={`grid gap-8 ${viewMode === 'grid' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
                 {filteredCourses.map((course, index) => (
                   <CourseCard key={course.id} course={course} index={index} />
@@ -150,15 +202,19 @@ const Courses = () => {
                   No courses found
                 </h3>
                 <p className="text-muted-foreground mb-6">
-                  Try adjusting your search or filters
+                  {courses.length === 0 
+                    ? 'No courses have been added yet. Check back later!'
+                    : 'Try adjusting your search or filters'}
                 </p>
-                <Button variant="outline" onClick={() => {
-                  setSearchQuery('');
-                  setSelectedCategory('All');
-                  setSelectedLevel('All Levels');
-                }}>
-                  Clear Filters
-                </Button>
+                {courses.length > 0 && (
+                  <Button variant="outline" onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('All');
+                    setSelectedLevel('All Levels');
+                  }}>
+                    Clear Filters
+                  </Button>
+                )}
               </motion.div>
             )}
           </div>
