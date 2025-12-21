@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Search, PlayCircle, ChevronDown, ChevronRight, GripVertical, Video } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Plus, Edit, Trash2, Search, PlayCircle, ChevronDown, ChevronRight, GripVertical, Video, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +19,7 @@ import {
   Course,
   Lesson 
 } from '@/hooks/useAdmin';
+import StudentPreviewModal from './StudentPreviewModal';
 
 const AdminCurriculum = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +29,8 @@ const AdminCurriculum = () => {
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [draggedLesson, setDraggedLesson] = useState<Lesson | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [previewCourse, setPreviewCourse] = useState<Course | null>(null);
+  const [previewLessons, setPreviewLessons] = useState<Lesson[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -183,6 +187,18 @@ const AdminCurriculum = () => {
     setDragOverIndex(null);
   };
 
+  const handleOpenPreview = async (course: Course) => {
+    // Fetch lessons for this course
+    const { data: courseLessons } = await supabase
+      .from('lessons')
+      .select('*')
+      .eq('course_id', course.id)
+      .order('order_index');
+    
+    setPreviewCourse(course);
+    setPreviewLessons(courseLessons || []);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -234,6 +250,17 @@ const AdminCurriculum = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenPreview(course);
+                    }}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview
+                  </Button>
                   <Badge variant="secondary">{course.category}</Badge>
                   <Badge variant={course.is_active ? 'default' : 'secondary'}>
                     {course.is_active ? 'Active' : 'Inactive'}
@@ -439,6 +466,16 @@ const AdminCurriculum = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Student Preview Modal */}
+      {previewCourse && (
+        <StudentPreviewModal
+          isOpen={!!previewCourse}
+          onClose={() => setPreviewCourse(null)}
+          course={previewCourse}
+          lessons={previewLessons}
+        />
+      )}
     </div>
   );
 };

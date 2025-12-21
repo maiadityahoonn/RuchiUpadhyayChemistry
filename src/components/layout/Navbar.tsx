@@ -158,6 +158,16 @@ const Navbar = () => {
                           Dashboard
                         </Button>
                       </Link>
+
+                      {isAdmin && (
+                        <Link to="/admin" onClick={() => setIsOpen(false)}>
+                          <Button variant="outline" className="w-full justify-start border-primary/50 text-primary hover:bg-primary/10">
+                            <Shield className="w-4 h-4 mr-2" />
+                            Admin Panel
+                          </Button>
+                        </Link>
+                      )}
+
                       <Button 
                         variant="ghost" 
                         className="w-full justify-start" 

@@ -16,6 +16,7 @@ import AdminTests from '@/components/admin/AdminTests';
 import AdminCourses from '@/components/admin/AdminCourses';
 import AdminCurriculum from '@/components/admin/AdminCurriculum';
 import AdminUsers from '@/components/admin/AdminUsers';
+import EnrollmentAnalytics from '@/components/admin/EnrollmentAnalytics';
 
 const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -108,6 +109,8 @@ const AdminDashboard = () => {
         return <AdminNotes />;
       case 'users':
         return <AdminUsers />;
+      case 'analytics':
+        return <EnrollmentAnalytics />;
       case 'overview':
       default:
         return (
