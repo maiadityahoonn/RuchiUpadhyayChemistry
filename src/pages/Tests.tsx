@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, XCircle, ArrowRight, Trophy, Zap, RotateCcw, Clock, Target } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowRight, Trophy, Zap, RotateCcw, Clock, Target, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { mockMCQQuestions } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Tests = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -14,6 +18,12 @@ const Tests = () => {
   const [answers, setAnswers] = useState<(number | null)[]>(new Array(mockMCQQuestions.length).fill(null));
   const [testCompleted, setTestCompleted] = useState(false);
   const [testStarted, setTestStarted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
+
+  const { user, profile, addXP } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const question = mockMCQQuestions[currentQuestion];
   const progress = ((currentQuestion + 1) / mockMCQQuestions.length) * 100;
@@ -49,6 +59,55 @@ const Tests = () => {
     return { correct, total: mockMCQQuestions.length, points: totalPoints };
   };
 
+  const saveTestResult = async (score: { correct: number; total: number; points: number }) => {
+    if (!user || hasSaved) return;
+    
+    setIsSaving(true);
+    try {
+      // Save test result to database
+      const { error: resultError } = await supabase
+        .from('test_results')
+        .insert({
+          user_id: user.id,
+          test_id: 'web-dev-quiz-1',
+          score: score.correct,
+          total_questions: score.total,
+          xp_earned: score.points,
+        });
+
+      if (resultError) {
+        console.error('Error saving test result:', resultError);
+        toast({
+          title: 'Error saving result',
+          description: resultError.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Add XP to user profile
+      await addXP(score.points);
+
+      setHasSaved(true);
+      toast({
+        title: 'Quiz completed!',
+        description: `You earned ${score.points} XP!`,
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Save results when test is completed
+  useEffect(() => {
+    if (testCompleted && user && !hasSaved) {
+      const score = calculateScore();
+      saveTestResult(score);
+    }
+  }, [testCompleted, user, hasSaved]);
+
   const resetTest = () => {
     setCurrentQuestion(0);
     setSelectedAnswer(null);
@@ -56,6 +115,7 @@ const Tests = () => {
     setAnswers(new Array(mockMCQQuestions.length).fill(null));
     setTestCompleted(false);
     setTestStarted(false);
+    setHasSaved(false);
   };
 
   const score = calculateScore();
@@ -81,6 +141,14 @@ const Tests = () => {
               <p className="text-lg text-muted-foreground">
                 Test your knowledge with our interactive MCQ quiz. Answer questions, earn XP, and track your progress!
               </p>
+
+              {!user && (
+                <div className="bg-warning/10 border border-warning/30 rounded-xl p-4">
+                  <p className="text-warning text-sm">
+                    Sign in to save your progress and earn XP!
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-card rounded-xl p-4 border border-border">
@@ -160,6 +228,36 @@ const Tests = () => {
                   </div>
                   <Progress value={(score.correct / score.total) * 100} className="h-3" />
                 </div>
+
+                {isSaving && (
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving your progress...</span>
+                  </div>
+                )}
+
+                {hasSaved && user && (
+                  <div className="flex items-center justify-center gap-2 text-success">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Progress saved! XP added to your profile.</span>
+                  </div>
+                )}
+
+                {!user && (
+                  <div className="bg-warning/10 border border-warning/30 rounded-xl p-4">
+                    <p className="text-warning text-sm">
+                      Sign in to save your progress and track your XP!
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => navigate('/login')}
+                    >
+                      Sign In
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-center gap-4">
@@ -167,8 +265,8 @@ const Tests = () => {
                   <RotateCcw className="w-5 h-5 mr-2" />
                   Retake Quiz
                 </Button>
-                <Button variant="gradient" size="lg">
-                  View More Quizzes
+                <Button variant="gradient" size="lg" onClick={() => navigate('/leaderboard')}>
+                  View Leaderboard
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </div>
