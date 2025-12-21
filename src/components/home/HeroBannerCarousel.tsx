@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import banner1 from '@/assets/banner1.png';
-import banner2 from '@/assets/banner2.png';
-import banner3 from '@/assets/banner3.png';
-import banner4 from '@/assets/banner4.png';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import banner1 from "@/assets/banner1.png";
+import banner2 from "@/assets/banner1.png";
+import banner3 from "@/assets/banner1.png";
+import banner4 from "@/assets/banner1.png";
 
 const bannerSlides = [
   { id: 1, image: banner1 },
@@ -15,7 +15,7 @@ const bannerSlides = [
 
 const slideVariants = {
   enter: (direction: number) => ({
-    x: direction > 0 ? '100%' : '-100%',
+    x: direction > 0 ? "100%" : "-100%",
     opacity: 0,
     scale: 1.1,
   }),
@@ -25,7 +25,7 @@ const slideVariants = {
     scale: 1,
   },
   exit: (direction: number) => ({
-    x: direction < 0 ? '100%' : '-100%',
+    x: direction < 0 ? "100%" : "-100%",
     opacity: 0,
     scale: 0.95,
   }),
@@ -65,7 +65,7 @@ const HeroBannerCarousel = () => {
             animate="center"
             exit="exit"
             transition={{
-              x: { type: 'spring', stiffness: 300, damping: 30 },
+              x: { type: "spring", stiffness: 300, damping: 30 },
               opacity: { duration: 0.4 },
               scale: { duration: 0.5 },
             }}
@@ -77,7 +77,7 @@ const HeroBannerCarousel = () => {
               className="w-full h-auto"
               initial={{ scale: 1 }}
               animate={{ scale: 1.05 }}
-              transition={{ duration: 5, ease: 'linear' }}
+              transition={{ duration: 5, ease: "linear" }}
             />
           </motion.div>
         </AnimatePresence>
@@ -106,11 +106,11 @@ const HeroBannerCarousel = () => {
                 setCurrentSlide(index);
               }}
               className="relative h-3 rounded-full transition-all overflow-hidden"
-              style={{ width: index === currentSlide ? '2rem' : '0.75rem' }}
+              style={{ width: index === currentSlide ? "2rem" : "0.75rem" }}
             >
-              <span 
+              <span
                 className={`absolute inset-0 rounded-full ${
-                  index === currentSlide ? 'bg-primary' : 'bg-foreground/50 hover:bg-foreground/70'
+                  index === currentSlide ? "bg-primary" : "bg-foreground/50 hover:bg-foreground/70"
                 }`}
               />
               {index === currentSlide && (
@@ -118,7 +118,7 @@ const HeroBannerCarousel = () => {
                   className="absolute inset-0 bg-primary/50 rounded-full origin-left"
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ duration: 5, ease: 'linear' }}
+                  transition={{ duration: 5, ease: "linear" }}
                 />
               )}
             </button>
