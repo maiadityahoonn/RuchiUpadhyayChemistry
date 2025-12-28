@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Edit, Trash2, Search, PlayCircle, ChevronDown, ChevronRight, GripVertical, Video, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, PlayCircle, ChevronDown, ChevronRight, GripVertical, Video, Eye, FileText, Link as LinkIcon, HelpCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,15 +10,15 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { 
-  useCoursesList, 
-  useLessons, 
-  useCreateLesson, 
-  useUpdateLesson, 
+import {
+  useCoursesList,
+  useLessons,
+  useCreateLesson,
+  useUpdateLesson,
   useDeleteLesson,
   useReorderLessons,
   Course,
-  Lesson 
+  Lesson
 } from '@/hooks/useAdmin';
 import StudentPreviewModal from './StudentPreviewModal';
 
@@ -38,6 +39,8 @@ const AdminCurriculum = () => {
     duration: '',
     order_index: 0,
     is_free: false,
+    content_type: 'video' as 'video' | 'pdf' | 'quiz' | 'link',
+    file_url: '',
   });
 
   const { data: courses, isLoading: coursesLoading } = useCoursesList();
@@ -75,7 +78,10 @@ const AdminCurriculum = () => {
         youtube_video_id: lesson.youtube_video_id || '',
         duration: lesson.duration || '',
         order_index: lesson.order_index,
+        order_index: lesson.order_index,
         is_free: lesson.is_free,
+        content_type: lesson.content_type || 'video',
+        file_url: lesson.file_url || '',
       });
     } else {
       setEditingLesson(null);
@@ -86,7 +92,10 @@ const AdminCurriculum = () => {
         youtube_video_id: '',
         duration: '',
         order_index: maxOrder + 1,
+        order_index: maxOrder + 1,
         is_free: false,
+        content_type: 'video',
+        file_url: '',
       });
     }
     setIsDialogOpen(true);
@@ -94,12 +103,12 @@ const AdminCurriculum = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedCourse) return;
 
     if (editingLesson) {
-      await updateLesson.mutateAsync({ 
-        id: editingLesson.id, 
+      await updateLesson.mutateAsync({
+        id: editingLesson.id,
         ...formData,
         youtube_video_id: formData.youtube_video_id || null,
         description: formData.description || null,
@@ -112,9 +121,11 @@ const AdminCurriculum = () => {
         youtube_video_id: formData.youtube_video_id || null,
         description: formData.description || null,
         duration: formData.duration || null,
+        content_type: formData.content_type,
+        file_url: formData.file_url || null,
       });
     }
-    
+
     setIsDialogOpen(false);
     setEditingLesson(null);
   };
@@ -125,13 +136,21 @@ const AdminCurriculum = () => {
     }
   };
 
-  const extractYouTubeId = (input: string) => {
-    if (/^[a-zA-Z0-9_-]{11}$/.test(input)) {
-      return input;
-    }
-    const regex = /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
-    const match = input.match(regex);
-    return match ? match[1] : input;
+  const extractVideoId = (input: string) => {
+    if (!input) return '';
+    // YouTube
+    const ytRegex = /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
+    const ytMatch = input.match(ytRegex);
+    if (ytMatch) return ytMatch[1];
+    if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+
+    // Vimeo
+    const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
+    const vimeoMatch = input.match(vimeoRegex);
+    if (vimeoMatch) return vimeoMatch[1];
+    if (/^\d+$/.test(input)) return input;
+
+    return input;
   };
 
   // Drag and drop handlers
@@ -154,9 +173,9 @@ const AdminCurriculum = () => {
   const handleDrop = useCallback(async (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
     setDragOverIndex(null);
-    
+
     if (!draggedLesson || !lessons || !selectedCourse) return;
-    
+
     const sourceIndex = lessons.findIndex(l => l.id === draggedLesson.id);
     if (sourceIndex === targetIndex) {
       setDraggedLesson(null);
@@ -194,9 +213,15 @@ const AdminCurriculum = () => {
       .select('*')
       .eq('course_id', course.id)
       .order('order_index');
-    
+
+    const typedLessons = (courseLessons || []).map(l => ({
+      ...l,
+      content_type: (l as any).content_type || 'video',
+      file_url: (l as any).file_url || null,
+    })) as Lesson[];
+
     setPreviewCourse(course);
-    setPreviewLessons(courseLessons || []);
+    setPreviewLessons(typedLessons);
   };
 
   return (
@@ -229,7 +254,7 @@ const AdminCurriculum = () => {
               className="bg-card rounded-2xl border border-border overflow-hidden"
             >
               {/* Course Header */}
-              <div 
+              <div
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-secondary/30 transition-colors"
                 onClick={() => toggleCourse(course.id)}
               >
@@ -250,8 +275,8 @@ const AdminCurriculum = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -296,13 +321,12 @@ const AdminCurriculum = () => {
                             onDragLeave={handleDragLeave}
                             onDrop={(e) => handleDrop(e, index)}
                             onDragEnd={handleDragEnd}
-                            className={`flex items-center gap-3 p-3 bg-card rounded-lg border group transition-all ${
-                              draggedLesson?.id === lesson.id
-                                ? 'opacity-50 border-primary'
-                                : dragOverIndex === index
+                            className={`flex items-center gap-3 p-3 bg-card rounded-lg border group transition-all ${draggedLesson?.id === lesson.id
+                              ? 'opacity-50 border-primary'
+                              : dragOverIndex === index
                                 ? 'border-primary bg-primary/5'
                                 : 'border-border hover:border-primary/50'
-                            }`}
+                              }`}
                           >
                             <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
                             <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
@@ -329,9 +353,9 @@ const AdminCurriculum = () => {
                               <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(course, lesson)}>
                                 <Edit className="w-4 h-4" />
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="text-destructive"
                                 onClick={() => handleDelete(lesson)}
                               >
@@ -360,7 +384,7 @@ const AdminCurriculum = () => {
 
       {/* Add/Edit Lesson Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingLesson ? 'Edit Lesson' : 'Add New Lesson'}
@@ -381,6 +405,31 @@ const AdminCurriculum = () => {
               />
             </div>
 
+            <div className="space-y-4">
+              <Label>Content Type</Label>
+              <Tabs
+                defaultValue="video"
+                value={formData.content_type}
+                onValueChange={(val) => setFormData({ ...formData, content_type: val as any })}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="video" className="flex gap-2">
+                    <Video className="w-4 h-4" /> Video
+                  </TabsTrigger>
+                  <TabsTrigger value="pdf" className="flex gap-2">
+                    <FileText className="w-4 h-4" /> PDF/Doc
+                  </TabsTrigger>
+                  <TabsTrigger value="quiz" className="flex gap-2">
+                    <HelpCircle className="w-4 h-4" /> Quiz/DPP
+                  </TabsTrigger>
+                  <TabsTrigger value="link" className="flex gap-2">
+                    <LinkIcon className="w-4 h-4" /> Link
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -392,22 +441,39 @@ const AdminCurriculum = () => {
               />
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            {formData.content_type === 'video' && (
               <div className="space-y-2">
                 <Label htmlFor="youtube_video_id">YouTube Video ID or URL</Label>
                 <Input
                   id="youtube_video_id"
                   value={formData.youtube_video_id}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    youtube_video_id: extractYouTubeId(e.target.value) 
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    youtube_video_id: extractVideoId(e.target.value)
                   })}
-                  placeholder="e.g., dQw4w9WgXcQ or full URL"
+                  placeholder="e.g., YouTube ID, Vimeo ID or URL"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Paste a YouTube URL or just the video ID
+                  Paste YouTube or Vimeo URL/ID
                 </p>
               </div>
+            )}
+
+            {(formData.content_type === 'pdf' || formData.content_type === 'link') && (
+              <div className="space-y-2">
+                <Label htmlFor="file_url">
+                  {formData.content_type === 'pdf' ? 'PDF URL' : 'Link URL'}
+                </Label>
+                <Input
+                  id="file_url"
+                  value={formData.file_url}
+                  onChange={(e) => setFormData({ ...formData, file_url: e.target.value })}
+                  placeholder={formData.content_type === 'pdf' ? "https://example.com/file.pdf" : "https://example.com"}
+                />
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-2 gap-4">
 
               <div className="space-y-2">
                 <Label htmlFor="duration">Duration</Label>
@@ -441,16 +507,35 @@ const AdminCurriculum = () => {
               </div>
             </div>
 
-            {formData.youtube_video_id && (
+
+            {formData.content_type === 'video' && formData.youtube_video_id && (
               <div className="space-y-2">
                 <Label>Preview</Label>
                 <div className="aspect-video rounded-lg overflow-hidden bg-secondary">
-                  <iframe
-                    src={`https://www.youtube.com/embed/${formData.youtube_video_id}`}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
+                  {(() => {
+                    const videoId = formData.youtube_video_id;
+                    const isVimeo = videoId.includes('vimeo') || /^\d+$/.test(videoId);
+                    const cleanId = videoId.replace(/https?:\/\/vimeo\.com\//, '').split('?')[0];
+
+                    if (isVimeo) {
+                      return (
+                        <iframe
+                          src={`https://player.vimeo.com/video/${cleanId}`}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      );
+                    }
+                    return (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${videoId}`}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -465,18 +550,20 @@ const AdminCurriculum = () => {
             </div>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Student Preview Modal */}
-      {previewCourse && (
-        <StudentPreviewModal
-          isOpen={!!previewCourse}
-          onClose={() => setPreviewCourse(null)}
-          course={previewCourse}
-          lessons={previewLessons}
-        />
-      )}
-    </div>
+      {
+        previewCourse && (
+          <StudentPreviewModal
+            isOpen={!!previewCourse}
+            onClose={() => setPreviewCourse(null)}
+            course={previewCourse}
+            lessons={previewLessons}
+          />
+        )
+      }
+    </div >
   );
 };
 

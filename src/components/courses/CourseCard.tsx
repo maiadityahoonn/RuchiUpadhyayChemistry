@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
-import { Star, Clock, Users, Zap, BookOpen, CheckCircle, Loader2, Play } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Star, Clock, Users, Zap, BookOpen, CheckCircle, Loader2, Play, Calendar, MessageCircle, GraduationCap, Share2 } from 'lucide-react';
 import { Course } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useCourses } from '@/hooks/useCourses';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface CourseCardProps {
   course: Course;
@@ -17,30 +18,70 @@ interface CourseCardProps {
 
 const CourseCard = ({ course, index = 0, showProgress = false }: CourseCardProps) => {
   const [isEnrolling, setIsEnrolling] = useState(false);
-  const { enrollInCourse, isEnrolled, getProgress } = useCourses();
+  const { enrollInCourse, isEnrolled, getProgress, refetch } = useCourses();
   const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
-  
+  const location = useLocation();
+
   const enrolled = isEnrolled(course.id);
   const progress = getProgress(course.id);
 
-  const discount = course.originalPrice 
-    ? Math.round((1 - course.price / course.originalPrice) * 100) 
+  // Refetch when location changes (e.g., navigating back from course details)
+  // Refetch when location changes (e.g., navigating back from course details)
+  useEffect(() => {
+    if (enrolled && user) {
+      refetch();
+    }
+  }, [location.pathname, enrolled, user]);
+
+
+
+  const discount = course.originalPrice
+    ? Math.round((1 - course.price / course.originalPrice) * 100)
     : 0;
 
   const handleEnroll = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!user) {
       navigate('/login');
       return;
     }
-    
+
     setIsEnrolling(true);
     await enrollInCourse(course.id);
     setIsEnrolling(false);
   };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const shareUrl = `${window.location.origin}/course/${course.id}`;
+    const shareData = {
+      title: course.title,
+      text: `Check out this course: ${course.title}`,
+      url: shareUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: "Link copied!",
+          description: "Course link copied to clipboard.",
+        });
+      }
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
+
 
   return (
     <motion.div
@@ -48,112 +89,174 @@ const CourseCard = ({ course, index = 0, showProgress = false }: CourseCardProps
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      whileHover={{ y: -8 }}
       className="group"
     >
       <Link to={`/course/${course.id}`} className="block">
-        <div className="bg-card rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-border">
-          {/* Image */}
-          <div className="relative h-48 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <BookOpen className="w-16 h-16 text-primary/30" />
+        <div className="glass-card hover-lift transition-all duration-500 border-primary/5 overflow-hidden rounded-2xl relative">
+          {/* Status Badge - Top Left */}
+          {course.status && (
+            <div className="absolute top-0 left-0 z-20">
+              <div className="bg-gradient-to-r from-primary to-accent text-white px-4 py-1 text-[10px] font-bold tracking-wider uppercase shadow-lg" style={{
+                clipPath: 'polygon(0 0, 100% 0, 85% 100%, 0% 100%)'
+              }}>
+                {course.status}
+              </div>
             </div>
-            
-            {/* Badges */}
-            <div className="absolute top-4 left-4 flex gap-2">
-              {enrolled && (
-                <Badge className="bg-success text-success-foreground">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Enrolled
+          )}
+
+          {/* Enhanced Image Section */}
+          <div className="relative h-56 overflow-hidden">
+            {course.image ? (
+              <img
+                src={course.image}
+                alt={course.title}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+              />
+            ) : (
+              <>
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/30 group-hover:scale-110 transition-transform duration-700" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <BookOpen className="w-20 h-20 text-white/40 group-hover:text-white/60 transition-colors duration-300" />
+                </div>
+              </>
+            )}
+
+            {/* Overlay gradient for better text visibility */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+
+            {/* Top Right Badges */}
+            <div className="absolute top-4 right-4 flex flex-col gap-2 items-end z-10">
+              {course.language && (
+                <Badge className="bg-white/90 text-gray-800 backdrop-blur-sm shadow-lg font-bold">
+                  {course.language}
                 </Badge>
               )}
-              {!enrolled && discount > 0 && (
-                <Badge className="bg-accent text-accent-foreground">
-                  {discount}% OFF
-                </Badge>
-              )}
-              <Badge variant="secondary" className="bg-card/90 backdrop-blur-sm">
-                {course.level}
-              </Badge>
+              <button
+                onClick={handleShare}
+                className="bg-white/90 hover:bg-white text-gray-800 p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* XP Reward */}
-            <div className="absolute top-4 right-4">
-              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-success/90 text-success-foreground text-xs font-semibold">
-                <Zap className="w-3 h-3" />
-                +{course.xpReward} XP
+            {/* Floating Category Badge - Bottom Left */}
+            <div className="absolute bottom-4 left-4 z-10">
+              <div className="px-3 py-1 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent text-white text-[11px] font-bold tracking-wider uppercase backdrop-blur-sm">
+                {course.category}
               </div>
             </div>
           </div>
 
-          {/* Content */}
+          {/* Content Section */}
           <div className="p-6 space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm text-primary font-medium">{course.category}</p>
-              <h3 className="font-heading font-semibold text-lg text-card-foreground line-clamp-2 group-hover:text-primary transition-colors">
+            {/* Title and Enrollment Status */}
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-heading font-bold text-xl text-card-foreground line-clamp-2 group-hover:text-primary transition-colors leading-tight flex-1">
                 {course.title}
               </h3>
+              {enrolled && (
+                <Badge className="bg-success/90 text-white backdrop-blur-sm shadow-lg shrink-0">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Enrolled
+                </Badge>
+              )}
             </div>
 
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {course.description}
-            </p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground -mt-2">
+              <GraduationCap className="w-4 h-4 text-primary" />
+              <span className="font-medium">{course.instructor}</span>
+            </div>
 
-            {/* Progress Bar for enrolled courses */}
-            {enrolled && (showProgress || progress > 0) && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Progress</span>
-                  <span className="font-semibold text-primary">{progress}%</span>
-                </div>
-                <Progress value={progress} className="h-2" />
+            {/* Target Audience */}
+            {course.targetAudience && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/30 px-3 py-1.5 rounded-lg">
+                <GraduationCap className="w-4 h-4" />
+                <span className="font-medium">{course.targetAudience}</span>
               </div>
             )}
 
-            {/* Stats */}
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                {course.duration}
+            {/* Date Information */}
+            {(course.startDate || course.endDate) && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>
+                  {course.startDate && `Starts on ${new Date(course.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                  {course.startDate && course.endDate && ' • '}
+                  {course.endDate && `Ends on ${new Date(course.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                </span>
               </div>
-              <div className="flex items-center gap-1">
-                <BookOpen className="w-4 h-4" />
-                {course.lessons} lessons
+            )}
+
+
+
+
+
+            {/* Stats Row */}
+            <div className="flex items-center gap-3 text-sm flex-wrap">
+              <div className="flex items-center gap-1.5 text-muted-foreground bg-secondary/30 px-2 py-1 rounded-full">
+                <Clock className="w-3.5 h-3.5" />
+                <span className="font-medium">{course.duration}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground bg-secondary/30 px-2 py-1 rounded-full">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span className="font-medium">{course.lessons} lessons</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-warning/10 px-2 py-1 rounded-full border border-warning/20">
+                <Star className="w-3.5 h-3.5 text-warning fill-warning" />
+                <span className="font-bold text-card-foreground">{course.rating}</span>
               </div>
             </div>
 
-            {/* Rating & Students */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 text-warning fill-warning" />
-                  <span className="font-semibold text-card-foreground">{course.rating}</span>
-                </div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Users className="w-4 h-4" />
-                  <span className="text-sm">{course.students.toLocaleString()}</span>
-                </div>
+            {/* Students and XP */}
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Users className="w-4 h-4" />
+                <span className="text-sm font-medium">{course.students.toLocaleString()} students</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-warning/90 backdrop-blur-sm text-white text-xs font-extrabold shadow-lg border border-warning/30">
+                <Zap className="w-4 h-4" />
+                +{course.xpReward} XP
               </div>
             </div>
 
-            {/* Price & CTA */}
-            <div className="flex items-center justify-between pt-4 border-t border-border">
+            {/* Price Section */}
+            <div className="pt-4 border-t border-primary/5 space-y-3">
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-bold text-primary">₹{course.price}</span>
+                {course.originalPrice && (
+                  <span className="text-lg text-muted-foreground line-through">
+                    ₹{course.originalPrice}
+                  </span>
+                )}
+                {discount > 0 && (
+                  <Badge className="bg-success/90 text-white backdrop-blur-sm shadow-lg">
+                    <Zap className="w-3 h-3 mr-1" />
+                    Discount of {discount}% applied
+                  </Badge>
+                )}
+              </div>
+              {!enrolled && course.originalPrice && (
+                <p className="text-xs text-muted-foreground">(FOR FULL BATCH)</p>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-2">
               {!enrolled ? (
                 <>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-card-foreground">₹{course.price}</span>
-                    {course.originalPrice && (
-                      <span className="text-sm text-muted-foreground line-through">
-                        ₹{course.originalPrice}
-                      </span>
-                    )}
-                  </div>
-                  <Button 
-                    variant="gradient" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="flex-1 border-primary/30 hover:bg-primary/5 text-primary font-bold rounded-xl btn-premium-hover"
+                  >
+                    EXPLORE
+                  </Button>
+                  <Button
+                    variant="gradient"
+                    size="lg"
                     onClick={handleEnroll}
                     disabled={isEnrolling}
+                    className="flex-1 btn-premium-hover shadow-lg font-bold rounded-xl"
                   >
                     {isEnrolling ? (
                       <>
@@ -161,20 +264,21 @@ const CourseCard = ({ course, index = 0, showProgress = false }: CourseCardProps
                         Enrolling...
                       </>
                     ) : (
-                      'Enroll Now'
+                      'BUY NOW'
                     )}
                   </Button>
                 </>
               ) : (
-                <>
-                  <div className="text-sm text-muted-foreground">
-                    {progress === 100 ? 'Completed!' : `${course.lessons - Math.floor(course.lessons * progress / 100)} lessons left`}
-                  </div>
-                  <Button variant="gradient" size="sm">
-                    <Play className="w-4 h-4 mr-1" />
-                    {progress > 0 ? 'Continue' : 'Start'}
+                <div className="flex justify-center">
+                  <Button
+                    variant="gradient"
+                    className="w-auto px-8 h-9 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 rounded-full group/btn relative overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700 skew-x-12" />
+                    <span className="text-xs font-bold tracking-wide mr-2">RESUME</span>
+                    <Play className="w-3 h-3 fill-current group-hover/btn:translate-x-0.5 transition-transform" />
                   </Button>
-                </>
+                </div>
               )}
             </div>
           </div>

@@ -8,6 +8,7 @@ export interface Note {
   title: string;
   content: string;
   category: string;
+  price: number;
   file_url: string | null;
   created_by: string | null;
   created_at: string;
@@ -21,6 +22,8 @@ export interface Test {
   category: string;
   duration_minutes: number;
   total_marks: number;
+  reward_points: number;
+  price: number;
   questions: {
     id: string;
     question: string;
@@ -48,6 +51,17 @@ export interface Course {
   lessons: number;
   level: string;
   xp_reward: number;
+  rating: number;
+  students: number;
+  language: string;
+  start_date: string | null;
+  end_date: string | null;
+  batch_info: string | null;
+  status: string;
+  target_audience: string | null;
+  whatsapp_link?: string | null;
+  features: string[];
+  intro_video_url?: string | null;
   is_active: boolean;
   created_by: string | null;
   created_at: string;
@@ -63,6 +77,8 @@ export interface Lesson {
   duration: string | null;
   order_index: number;
   is_free: boolean;
+  content_type: 'video' | 'pdf' | 'quiz' | 'link';
+  file_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -90,15 +106,15 @@ export const useIsAdmin = () => {
     queryKey: ['isAdmin', user?.id],
     queryFn: async () => {
       if (!user) return false;
-      
+
       const { data, error } = await supabase
         .rpc('has_role', { _user_id: user.id, _role: 'admin' });
-      
+
       if (error) {
         console.error('Error checking admin status:', error);
         return false;
       }
-      
+
       return data ?? false;
     },
     enabled: !!user,
@@ -110,13 +126,13 @@ export const useNotes = (category?: string) => {
     queryKey: ['notes', category],
     queryFn: async () => {
       let query = supabase.from('notes').select('*').order('created_at', { ascending: false });
-      
+
       if (category) {
         query = query.eq('category', category);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) throw error;
       return data as Note[];
     },
@@ -128,13 +144,13 @@ export const useTests = (category?: string) => {
     queryKey: ['tests', category],
     queryFn: async () => {
       let query = supabase.from('tests').select('*').order('created_at', { ascending: false });
-      
+
       if (category) {
         query = query.eq('category', category);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) throw error;
       return (data as any[])?.map(test => ({
         ...test,
@@ -149,13 +165,13 @@ export const useCoursesList = (category?: string) => {
     queryKey: ['courses-db', category],
     queryFn: async () => {
       let query = supabase.from('courses').select('*').order('created_at', { ascending: false });
-      
+
       if (category) {
         query = query.eq('category', category);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) throw error;
       return data as Course[];
     },
@@ -175,7 +191,7 @@ export const useCreateNote = () => {
         .insert([{ ...note, created_by: user?.id }])
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -201,7 +217,7 @@ export const useUpdateNote = () => {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -247,7 +263,7 @@ export const useCreateTest = () => {
         .insert([{ ...test, created_by: user?.id }])
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -273,7 +289,7 @@ export const useUpdateTest = () => {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -319,7 +335,7 @@ export const useCreateCourse = () => {
         .insert([{ ...course, created_by: user?.id }])
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -345,7 +361,7 @@ export const useUpdateCourse = () => {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -384,13 +400,13 @@ export const useLessons = (courseId?: string) => {
     queryKey: ['lessons', courseId],
     queryFn: async () => {
       if (!courseId) return [];
-      
+
       const { data, error } = await supabase
         .from('lessons')
         .select('*')
         .eq('course_id', courseId)
         .order('order_index', { ascending: true });
-      
+
       if (error) throw error;
       return data as Lesson[];
     },
@@ -409,7 +425,7 @@ export const useCreateLesson = () => {
         .insert([lesson])
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -435,7 +451,7 @@ export const useUpdateLesson = () => {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -475,13 +491,13 @@ export const useReorderLessons = () => {
 
   return useMutation({
     mutationFn: async ({ lessons, courseId }: { lessons: { id: string; order_index: number }[]; courseId: string }) => {
-      const updates = lessons.map(lesson => 
+      const updates = lessons.map(lesson =>
         supabase
           .from('lessons')
           .update({ order_index: lesson.order_index })
           .eq('id', lesson.id)
       );
-      
+
       await Promise.all(updates);
       return courseId;
     },
@@ -502,17 +518,17 @@ export const useUploadNoteFile = () => {
     mutationFn: async (file: File) => {
       const fileExt = file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      
+
       const { data, error } = await supabase.storage
         .from('notes')
         .upload(fileName, file);
-      
+
       if (error) throw error;
-      
+
       const { data: { publicUrl } } = supabase.storage
         .from('notes')
         .getPublicUrl(fileName);
-      
+
       return publicUrl;
     },
     onError: (error: Error) => {
@@ -528,11 +544,11 @@ export const useDeleteNoteFile = () => {
     mutationFn: async (fileUrl: string) => {
       const fileName = fileUrl.split('/').pop();
       if (!fileName) throw new Error('Invalid file URL');
-      
+
       const { error } = await supabase.storage
         .from('notes')
         .remove([fileName]);
-      
+
       if (error) throw error;
     },
     onError: (error: Error) => {
@@ -551,14 +567,14 @@ export const useUsers = () => {
         .from('profiles')
         .select('user_id, username, avatar_url, created_at')
         .order('created_at', { ascending: false });
-      
+
       if (profilesError) throw profilesError;
 
       // Get all user roles
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
-      
+
       if (rolesError) throw rolesError;
 
       // Merge the data
@@ -587,14 +603,14 @@ export const useAssignRole = () => {
     mutationFn: async ({ userId, role }: { userId: string; role: 'admin' | 'moderator' | 'user' }) => {
       // First, delete existing role for this user
       await supabase.from('user_roles').delete().eq('user_id', userId);
-      
+
       // Then insert the new role
       const { data, error } = await supabase
         .from('user_roles')
         .insert([{ user_id: userId, role }])
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -623,6 +639,97 @@ export const useRemoveRole = () => {
     },
     onError: (error: Error) => {
       toast({ title: 'Failed to remove role', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useUserPurchases = () => {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['user-purchases', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'completed');
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+};
+
+export const useBuyTest = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (testId: string) => {
+      if (!user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .from('purchases')
+        .insert([{
+          user_id: user.id,
+          test_id: testId,
+          order_id: 'TEST_' + Date.now() + '_' + Math.random().toString(36).substring(7),
+          amount: 0,
+          status: 'completed',
+          payment_id: 'internal_' + Math.random().toString(36).substring(7),
+        } as any])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-purchases'] });
+      toast({ title: 'Test unlocked successfully!' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Purchase failed', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useBuyNote = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (noteId: string) => {
+      if (!user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .from('purchases')
+        .insert([{
+          user_id: user.id,
+          note_id: noteId,
+          order_id: 'NOTE_' + Date.now() + '_' + Math.random().toString(36).substring(7),
+          amount: 0,
+          status: 'completed',
+          payment_id: 'internal_' + Math.random().toString(36).substring(7),
+        } as any])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-purchases'] });
+      toast({ title: 'Note unlocked successfully!' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Purchase failed', description: error.message, variant: 'destructive' });
     },
   });
 };

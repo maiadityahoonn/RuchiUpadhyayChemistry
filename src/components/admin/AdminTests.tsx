@@ -31,6 +31,8 @@ const AdminTests = () => {
     category: '',
     duration_minutes: 30,
     total_marks: 100,
+    reward_points: 100,
+    price: 0,
     is_active: true,
     questions: [] as Question[],
   });
@@ -54,6 +56,8 @@ const AdminTests = () => {
         category: test.category,
         duration_minutes: test.duration_minutes,
         total_marks: test.total_marks,
+        reward_points: test.reward_points || test.total_marks,
+        price: test.price || 0,
         is_active: test.is_active,
         questions: test.questions,
       });
@@ -65,6 +69,8 @@ const AdminTests = () => {
         category: '',
         duration_minutes: 30,
         total_marks: 100,
+        reward_points: 100,
+        price: 0,
         is_active: true,
         questions: [],
       });
@@ -103,13 +109,13 @@ const AdminTests = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (editingTest) {
       await updateTest.mutateAsync({ id: editingTest.id, ...formData });
     } else {
       await createTest.mutateAsync(formData);
     }
-    
+
     setIsDialogOpen(false);
     setEditingTest(null);
   };
@@ -133,7 +139,7 @@ const AdminTests = () => {
             className="pl-10"
           />
         </div>
-        
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="gradient" onClick={() => handleOpenDialog()}>
@@ -157,7 +163,7 @@ const AdminTests = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
                   <Select
@@ -189,7 +195,7 @@ const AdminTests = () => {
                 />
               </div>
 
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="duration">Duration (minutes)</Label>
                   <Input
@@ -210,13 +216,34 @@ const AdminTests = () => {
                     min={1}
                   />
                 </div>
-                <div className="flex items-center gap-3 pt-6">
-                  <Switch
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                <div className="space-y-2">
+                  <Label htmlFor="reward_points">Reward Points (XP)</Label>
+                  <Input
+                    id="reward_points"
+                    type="number"
+                    value={formData.reward_points}
+                    onChange={(e) => setFormData({ ...formData, reward_points: parseInt(e.target.value) })}
+                    min={1}
                   />
-                  <Label>Active</Label>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price">Price (₹)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) })}
+                    min={0}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
+                <Label>Active</Label>
               </div>
 
               {/* Questions */}
@@ -295,7 +322,7 @@ const AdminTests = () => {
                   </div>
                 ))}
               </div>
-              
+
               <div className="flex justify-end gap-3 pt-4 border-t border-border">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
@@ -318,6 +345,7 @@ const AdminTests = () => {
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Test</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Category</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Questions</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Price</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Status</th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -354,6 +382,9 @@ const AdminTests = () => {
                     <td className="px-6 py-4 text-card-foreground">
                       {test.questions.length}
                     </td>
+                    <td className="px-6 py-4 text-card-foreground">
+                      ₹{test.price || 0}
+                    </td>
                     <td className="px-6 py-4">
                       <Badge variant={test.is_active ? 'default' : 'secondary'}>
                         {test.is_active ? 'Active' : 'Inactive'}
@@ -364,9 +395,9 @@ const AdminTests = () => {
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(test)}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="text-destructive"
                           onClick={() => handleDelete(test.id)}
                         >

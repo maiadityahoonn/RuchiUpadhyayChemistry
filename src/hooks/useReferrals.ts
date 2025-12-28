@@ -17,7 +17,7 @@ export interface Referral {
 const REFERRAL_POINTS = 100; // Points earned per successful referral
 
 export const useReferrals = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refetchProfile } = useAuth();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [referralCode, setReferralCode] = useState<string | null>(null);
@@ -67,84 +67,46 @@ export const useReferrals = () => {
     }
   }, [profile]);
 
-  const applyReferralCode = async (code: string) => {
-    if (!user) {
+  const applyReferralCode = async (code: string, userId?: string) => {
+    const effectiveUserId = userId || user?.id;
+
+    if (!effectiveUserId) {
       toast.error('Please login first');
       return false;
     }
 
-    // Check if code exists and is not user's own code
-    const { data: referrerProfile, error: fetchError } = await supabase
-      .from('profiles')
-      .select('user_id, referral_code')
-      .eq('referral_code', code.toUpperCase())
-      .maybeSingle();
+    try {
+      console.log('💎 Applying referral code via RPC:', { code, userId: effectiveUserId });
+      const { data, error } = await (supabase as any).rpc('handle_referral', {
+        input_code: code,
+        new_user_id: effectiveUserId
+      });
 
-    if (fetchError || !referrerProfile) {
-      toast.error('Invalid referral code');
+      if (error) {
+        console.error('❌ RPC Error:', error);
+        toast.error('Failed to apply referral code');
+        return false;
+      }
+
+      const result = data as any;
+      if (result.success) {
+        toast.success(result.message);
+        // Refetch profile data to update UI
+        await fetchReferrals();
+        if (refetchProfile) await refetchProfile();
+        return true;
+      } else {
+        // If it's already used, we don't necessarily want to show an error if it was an auto-apply
+        if (result.message !== 'You have already used a referral code') {
+          toast.error(result.message);
+        }
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Referral Error:', error);
+      toast.error('Something went wrong');
       return false;
     }
-
-    if (referrerProfile.user_id === user.id) {
-      toast.error('You cannot use your own referral code');
-      return false;
-    }
-
-    // Check if user already used a referral code
-    const { data: existingRef } = await supabase
-      .from('profiles')
-      .select('referred_by')
-      .eq('user_id', user.id)
-      .single();
-
-    if (existingRef?.referred_by) {
-      toast.error('You have already used a referral code');
-      return false;
-    }
-
-    // Update user's profile with referred_by
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ referred_by: referrerProfile.user_id })
-      .eq('user_id', user.id);
-
-    if (updateError) {
-      toast.error('Failed to apply referral code');
-      return false;
-    }
-
-    // Add points to referrer - get current points first
-    const { data: referrerData } = await supabase
-      .from('profiles')
-      .select('reward_points')
-      .eq('user_id', referrerProfile.user_id)
-      .single();
-    
-    const currentPoints = referrerData?.reward_points || 0;
-    
-    await supabase
-      .from('profiles')
-      .update({ reward_points: currentPoints + REFERRAL_POINTS })
-      .eq('user_id', referrerProfile.user_id);
-
-    // Create referral record
-    await supabase.from('referrals').insert({
-      referrer_id: referrerProfile.user_id,
-      referred_user_id: user.id,
-      referral_code: code.toUpperCase(),
-      points_earned: REFERRAL_POINTS,
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-    });
-
-    // Give bonus points to the new user too
-    await supabase
-      .from('profiles')
-      .update({ reward_points: 50 }) // 50 points for using a referral code
-      .eq('user_id', user.id);
-
-    toast.success('Referral code applied! You earned 50 points');
-    return true;
   };
 
   const copyReferralLink = () => {

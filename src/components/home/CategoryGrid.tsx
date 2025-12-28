@@ -1,11 +1,35 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { courseCategories, mockCourses } from '@/data/mockData';
+import { courseCategories } from '@/data/mockData';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const CategoryGrid = () => {
+  const { data: categoryCounts } = useQuery({
+    queryKey: ['course-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('category');
+
+      if (error) {
+        console.error('Error fetching course counts:', error);
+        return {};
+      }
+
+      // Count courses per category
+      const counts: Record<string, number> = {};
+      data?.forEach((course) => {
+        const cat = course.category;
+        counts[cat] = (counts[cat] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+
   const getCourseCount = (categoryName: string) => {
-    return mockCourses.filter((c) => c.category === categoryName).length;
+    return categoryCounts ? (categoryCounts[categoryName] || 0) : 0;
   };
 
   return (

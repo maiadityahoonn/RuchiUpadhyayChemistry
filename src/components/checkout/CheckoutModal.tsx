@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ShoppingCart, Coins, Check, Loader2, X, 
-  Gift, ArrowRight, Percent, CreditCard 
+import {
+  ShoppingCart, Coins, Check, Loader2, X,
+  Gift, ArrowRight, Percent, CreditCard
 } from 'lucide-react';
 import {
   Dialog,
@@ -21,7 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-const POINTS_PER_RUPEE = 10; // 10 points = ₹1 discount
+const POINTS_PER_RUPEE = 100; // 100 points = ₹1 discount
 
 interface CheckoutModalProps {
   open: boolean;
@@ -79,7 +79,7 @@ const CheckoutModal = ({ open, onOpenChange, course, onEnrollSuccess }: Checkout
           .single();
 
         const currentPoints = profileData?.reward_points || 0;
-        
+
         if (currentPoints < pointsToUse) {
           toast.error('Insufficient reward points');
           setIsProcessing(false);
@@ -116,15 +116,33 @@ const CheckoutModal = ({ open, onOpenChange, course, onEnrollSuccess }: Checkout
         });
       }
 
+      // Record the purchase in the purchases table
+      const { error: purchaseError } = await supabase.from('purchases').insert({
+        user_id: user.id,
+        course_id: course.id,
+        amount: finalPrice,
+        points_used: pointsToUse,
+        points_discount: pointsDiscount,
+        status: 'completed',
+        order_id: `CRS_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        payment_id: finalPrice === 0 ? 'free_enroll' : `internal_${Math.random().toString(36).substring(7)}`,
+        paid_at: new Date().toISOString()
+      });
+
+      if (purchaseError) {
+        console.error('Error recording purchase:', purchaseError);
+        // We don't block enrollment if purchase record fails, but we should log it
+      }
+
       // Refresh referrals data to update points
       refetchReferrals();
 
       toast.success('Enrollment successful!', {
-        description: pointsDiscount > 0 
-          ? `Saved ₹${pointsDiscount} with reward points!` 
+        description: pointsDiscount > 0
+          ? `Saved ₹${pointsDiscount} with reward points!`
           : undefined,
       });
-      
+
       onEnrollSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -220,7 +238,7 @@ const CheckoutModal = ({ open, onOpenChange, course, onEnrollSuccess }: Checkout
                 ₹{course.originalPrice || course.price}
               </span>
             </div>
-            
+
             {courseDiscount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground flex items-center gap-1">
@@ -255,8 +273,8 @@ const CheckoutModal = ({ open, onOpenChange, course, onEnrollSuccess }: Checkout
           </div>
 
           {/* Checkout Button */}
-          <Button 
-            className="w-full" 
+          <Button
+            className="w-full"
             size="lg"
             onClick={handleCheckout}
             disabled={isProcessing}

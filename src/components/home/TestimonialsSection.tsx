@@ -1,42 +1,89 @@
 import { motion } from 'framer-motion';
 import { Star, Quote } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Testimonial } from '@/types';
 
-const testimonials = [
+const MOCK_TESTIMONIALS = [
   {
-    id: 1,
+    id: '1',
     name: 'Priya Sharma',
     role: 'IIT-JEE Qualified 2024',
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
     content: 'Ruchi ma\'am\'s teaching style is exceptional. Her organic chemistry concepts cleared all my doubts. I secured AIR 850 in JEE Advanced!',
     rating: 5,
+    createdAt: new Date().toISOString()
   },
   {
-    id: 2,
+    id: '2',
     name: 'Rahul Verma',
     role: 'NEET 2024 - 650+ Score',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
     content: 'The best chemistry classes in the city! The mock tests and practice papers helped me tremendously in NEET preparation.',
     rating: 5,
+    createdAt: new Date().toISOString()
   },
   {
-    id: 3,
+    id: '3',
     name: 'Ananya Singh',
     role: 'Class 12 - 98% in Chemistry',
-    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
     content: 'I was struggling with physical chemistry before joining here. Now it\'s my strongest subject! Thank you Ruchi ma\'am.',
     rating: 5,
+    createdAt: new Date().toISOString()
   },
   {
-    id: 4,
+    id: '4',
     name: 'Arjun Patel',
     role: 'Engineering Student',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
     content: 'Even for engineering chemistry, the foundation I built here helped me score consistently well in college.',
     rating: 5,
+    createdAt: new Date().toISOString()
   },
 ];
 
 const TestimonialsSection = () => {
+  const { data: testimonials, isLoading } = useQuery({
+    queryKey: ['testimonials'],
+    queryFn: async () => {
+      console.log('Fetching testimonials from Supabase...');
+      try {
+        const { data, error } = await supabase
+          .from('testimonials')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(4);
+
+        if (error) {
+          console.error('Error fetching testimonials:', error);
+          throw error;
+        }
+
+        console.log('Fetched testimonials:', data);
+
+        if (!data || data.length === 0) {
+          return MOCK_TESTIMONIALS;
+        }
+
+        return data.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          role: t.role,
+          imageUrl: t.image_url,
+          content: t.content,
+          rating: t.rating,
+          createdAt: t.created_at
+        })) as Testimonial[];
+      } catch (error) {
+        console.error('Failed to fetch testimonials, falling back to mock:', error);
+        return MOCK_TESTIMONIALS;
+      }
+    },
+  });
+
+  const displayTestimonials = isLoading ? MOCK_TESTIMONIALS : (testimonials || MOCK_TESTIMONIALS);
+
   return (
     <section className="py-20 bg-secondary/30">
       <div className="container mx-auto px-4">
@@ -59,7 +106,7 @@ const TestimonialsSection = () => {
         </motion.div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {testimonials.map((testimonial, index) => (
+          {displayTestimonials.map((testimonial, index) => (
             <motion.div
               key={testimonial.id}
               initial={{ opacity: 0, y: 30 }}
@@ -89,7 +136,7 @@ const TestimonialsSection = () => {
               {/* Author */}
               <div className="flex items-center gap-3">
                 <img
-                  src={testimonial.image}
+                  src={testimonial.imageUrl || '/placeholder.svg'}
                   alt={testimonial.name}
                   className="w-12 h-12 rounded-full object-cover border-2 border-primary"
                 />

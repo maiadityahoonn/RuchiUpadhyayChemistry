@@ -7,18 +7,18 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ScrollToTop from "@/components/ScrollToTop";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
-import CategoryCourses from "./pages/CategoryCourses";
 import CourseDetails from "./pages/CourseDetails";
 import Tests from "./pages/Tests";
-import CategoryTests from "./pages/CategoryTests";
 import Notes from "./pages/Notes";
 import Leaderboard from "./pages/Leaderboard";
-import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Login from "./pages/Login";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
+import Profile from "./pages/Profile";
+import Referrals from "./pages/Referrals";
 import PurchaseHistory from "./pages/PurchaseHistory";
+import Notifications from "./pages/Notifications";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -35,14 +35,17 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/courses" element={<Courses />} />
-            <Route path="/courses/:category" element={<CategoryCourses />} />
+            <Route path="/courses/:category" element={<Courses />} />
             <Route path="/course/:id" element={<CourseDetails />} />
             <Route path="/tests" element={<Tests />} />
-            <Route path="/tests/:category" element={<CategoryTests />} />
+            <Route path="/tests/:category" element={<Tests />} />
             <Route path="/notes" element={<Notes />} />
+            <Route path="/notes/:category" element={<Notes />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/purchases" element={<ProtectedRoute><PurchaseHistory /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
             <Route path="/login" element={<Login />} />
             <Route path="/contact" element={<Contact />} />

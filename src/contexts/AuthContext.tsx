@@ -12,6 +12,10 @@ interface Profile {
   level: number;
   streak: number;
   last_activity_date: string | null;
+  referral_code?: string;
+  reward_points: number;
+  weekly_xp?: number;
+  monthly_xp?: number;
 }
 
 interface AuthContextType {
@@ -19,11 +23,14 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signUp: (email: string, password: string, username?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, username?: string) => Promise<{ user: User | null; error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
   addXP: (amount: number) => Promise<void>;
+  addRewardPoints: (amount: number) => Promise<void>;
+  createProfile: () => Promise<void>;
+  refetchProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -49,12 +56,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
-    
+
     if (error) {
       console.error('Error fetching profile:', error);
       return null;
     }
+
+    if (data) {
+      checkDailyStreak(data as Profile);
+    }
+
     return data as Profile | null;
+  };
+
+  const checkDailyStreak = async (userProfile: Profile) => {
+    const today = new Date().toISOString().split('T')[0];
+    const lastActivity = userProfile.last_activity_date ? userProfile.last_activity_date.split('T')[0] : null;
+
+    if (lastActivity === today) return; // Already updated today
+
+    let newStreak = userProfile.streak;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    if (lastActivity === yesterdayStr) {
+      newStreak += 1;
+    } else {
+      newStreak = 1;
+    }
+
+    // Reward for login
+    const LOGIN_REWARD = 10;
+
+    const updates = {
+      streak: newStreak,
+      last_activity_date: new Date().toISOString(),
+      reward_points: userProfile.reward_points + LOGIN_REWARD,
+      xp: userProfile.xp + LOGIN_REWARD
+    };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('user_id', userProfile.user_id);
+
+    if (!error) {
+      setProfile(prev => prev ? { ...prev, ...updates } : null);
+      toast({
+        title: 'Daily Streak Updated!',
+        description: `You've earned ${LOGIN_REWARD} XP for your ${newStreak} day streak!`,
+      });
+    }
   };
 
   useEffect(() => {
@@ -63,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         // Defer profile fetch with setTimeout to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
@@ -90,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string, username?: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -108,15 +161,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: error.message,
         variant: 'destructive',
       });
-      return { error };
+      return { user: null, error };
     }
+
+    const newUser = (await supabase.auth.getUser()).data.user;
 
     toast({
       title: 'Account created!',
       description: 'You have been signed in automatically.',
     });
 
-    return { error: null };
+    return { user: newUser, error: null };
   };
 
   const signIn = async (email: string, password: string) => {
@@ -183,9 +238,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user || !profile) return;
 
     const newXP = profile.xp + amount;
+    const newPoints = profile.reward_points + amount;
     const newLevel = Math.floor(newXP / 1000) + 1;
 
-    await updateProfile({ xp: newXP, level: newLevel });
+    await updateProfile({
+      xp: newXP,
+      level: newLevel,
+      reward_points: newPoints,
+      weekly_xp: (profile.weekly_xp || 0) + amount,
+      monthly_xp: (profile.monthly_xp || 0) + amount
+    });
+  };
+
+  const addRewardPoints = async (amount: number) => {
+    if (!user || !profile) return;
+    const newPoints = profile.reward_points + amount;
+    await updateProfile({ reward_points: newPoints });
+  };
+
+  const createProfile = async () => {
+    if (!user) return;
+
+    // Generate a random referral code
+    const referralCode = 'REF' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const newProfile = {
+      user_id: user.id,
+      username: user.email?.split('@')[0] || 'User',
+      xp: 0,
+      reward_points: 0,
+      level: 1,
+      streak: 0,
+      referral_code: referralCode,
+    };
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert([newProfile])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating profile:', error);
+      toast({
+        title: 'Failed to create profile',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setProfile(data as Profile);
+    toast({
+      title: 'Profile Created',
+      description: 'Your profile has been initialized successfully.',
+    });
   };
 
   return (
@@ -200,6 +307,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signOut,
         updateProfile,
         addXP,
+        addRewardPoints,
+        createProfile,
+        refetchProfile: () => user ? fetchProfile(user.id).then(setProfile) : Promise.resolve(null),
       }}
     >
       {children}

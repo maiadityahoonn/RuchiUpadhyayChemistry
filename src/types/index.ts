@@ -1,4 +1,4 @@
-export type CourseCategory = 
+export type CourseCategory =
   | 'Class 10'
   | 'Class 12'
   | 'IIT-JEE'
@@ -21,6 +21,13 @@ export interface Course {
   rating: number;
   students: number;
   xpReward: number;
+  language: string;
+  startDate?: string;
+  endDate?: string;
+  batchInfo?: string;
+  status: string;
+  targetAudience?: string;
+  whatsappLink?: string;
   badge?: string;
 }
 
@@ -82,4 +89,14 @@ export interface CategoryInfo {
   icon: string;
   color: string;
   gradient: string;
+}
+
+export interface Testimonial {
+  id: string;
+  name: string;
+  role: string;
+  imageUrl: string | null;
+  content: string;
+  rating: number;
+  createdAt: string;
 }

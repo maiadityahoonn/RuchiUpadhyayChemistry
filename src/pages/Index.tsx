@@ -14,9 +14,43 @@ import FAQSection from '@/components/home/FAQSection';
 import CourseCard from '@/components/courses/CourseCard';
 import { Button } from '@/components/ui/button';
 import { mockCourses, mockBadges } from '@/data/mockData';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Course } from '@/types';
 
 const Index = () => {
-  const featuredCourses = mockCourses.slice(0, 3);
+  const { data: courses, isLoading } = useQuery({
+    queryKey: ['featured-courses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .limit(3);
+
+      if (error) throw error;
+
+      return data.map((course: any) => ({
+        id: course.id,
+        title: course.title,
+        description: course.description || '',
+        instructor: course.instructor,
+        price: course.price,
+        originalPrice: course.original_price,
+        image: course.image_url || '/placeholder.svg',
+        category: course.category as any,
+        duration: course.duration || '0 hours',
+        lessons: course.lessons || 0,
+        level: (course.level as any) || 'Beginner',
+        rating: 4.8, // Mock data
+        students: 100 + Math.floor(Math.random() * 5000), // Mock data
+        xpReward: course.xp_reward || 0,
+        language: 'English',
+        status: 'Active'
+      })) as Course[];
+    },
+  });
+
+  const featuredCourses = isLoading ? mockCourses.slice(0, 3) : (courses?.length ? courses : mockCourses.slice(0, 3));
 
   const stats = [
     { icon: Users, label: 'Chemistry Students', value: '50K+', color: 'text-primary' },
@@ -28,7 +62,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       {/* Hero Banner Carousel - Clean banner only */}
       <HeroBannerCarousel />
 
@@ -189,8 +223,8 @@ const Index = () => {
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="xl"
                 className="border-background/30 text-background hover:bg-background/10 hover:text-background"
               >

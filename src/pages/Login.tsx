@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, BookOpen, ArrowRight, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ruchiLogo from '@/assets/ruchi-logo.png';
 import { useAuth } from '@/contexts/AuthContext';
+import { useReferrals } from '@/hooks/useReferrals';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -18,7 +19,16 @@ const signupSchema = loginSchema.extend({
 });
 
 const Login = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [searchParams] = useSearchParams();
+  const referralFromUrl = searchParams.get('ref');
+
+  useEffect(() => {
+    if (referralFromUrl) {
+      console.log('📍 Storing referral code:', referralFromUrl);
+      localStorage.setItem('pending_referral', referralFromUrl);
+    }
+  }, [referralFromUrl]);
+  const [isLogin, setIsLogin] = useState(!referralFromUrl);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -29,12 +39,13 @@ const Login = () => {
   });
 
   const { signIn, signUp, user } = useAuth();
+  const { applyReferralCode } = useReferrals();
   const navigate = useNavigate();
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      navigate('/profile');
     }
   }, [user, navigate]);
 
@@ -63,12 +74,20 @@ const Login = () => {
       if (isLogin) {
         const { error } = await signIn(formData.email, formData.password);
         if (!error) {
-          navigate('/dashboard');
+          navigate('/profile');
         }
       } else {
-        const { error } = await signUp(formData.email, formData.password, formData.name);
-        if (!error) {
-          navigate('/dashboard');
+        const { user: newUser, error } = await signUp(formData.email, formData.password, formData.name);
+        if (!error && newUser) {
+          // Apply referral code if exists
+          if (referralFromUrl) {
+            console.log('🎁 Applying referral code for new user:', newUser.id);
+            // Small delay to ensure DB trigger creates the profile first
+            setTimeout(async () => {
+              await applyReferralCode(referralFromUrl, newUser.id);
+            }, 500);
+          }
+          navigate('/profile');
         }
       }
     } catch (error) {

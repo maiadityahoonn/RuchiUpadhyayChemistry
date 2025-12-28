@@ -96,7 +96,7 @@ const About = () => {
                   <span className="font-medium">Meet Your Instructor</span>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-heading font-bold text-foreground mb-4">
-                  Dr. Ruchi <span className="text-primary">Upadhyay</span>
+                  Prof. Ruchi <span className="text-primary">Upadhyay</span>
                 </h1>
                 <p className="text-xl text-muted-foreground mb-2">
                   Ph.D. (IIT Delhi) | M.Sc. Chemistry | B.Ed.

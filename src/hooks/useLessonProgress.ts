@@ -54,8 +54,8 @@ export const useLessonProgress = (courseId: string, totalLessons: number) => {
 
     const isCompleted = isLessonCompleted(sectionIndex, lessonIndex);
 
+    // Mark as complete or remove
     if (isCompleted) {
-      // Remove completion
       const { error } = await supabase
         .from('lesson_progress')
         .delete()
@@ -69,7 +69,6 @@ export const useLessonProgress = (courseId: string, totalLessons: number) => {
         return;
       }
     } else {
-      // Mark as complete
       const { error } = await supabase
         .from('lesson_progress')
         .insert({
@@ -85,21 +84,27 @@ export const useLessonProgress = (courseId: string, totalLessons: number) => {
       }
     }
 
-    // Refresh progress
+    // Refresh progress state
     await fetchProgress();
 
-    // Calculate and update overall course progress
-    const newCompletedCount = isCompleted 
-      ? lessonProgress.length - 1 
-      : lessonProgress.length + 1;
-    
-    const newProgressPercent = Math.round((newCompletedCount / totalLessons) * 100);
-    await updateProgress(courseId, Math.min(newProgressPercent, 100));
+    // Fetch the updated count directly to avoid race conditions with state
+    const { data: updatedData } = await supabase
+      .from('lesson_progress')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('course_id', courseId);
+
+    const actualCompletedCount = updatedData?.length || 0;
+
+    const newProgressPercent = Math.round((actualCompletedCount / totalLessons) * 100);
+    const cappedProgress = Math.min(newProgressPercent, 100);
+
+    await updateProgress(courseId, cappedProgress);
   };
 
   const completedCount = lessonProgress.length;
-  const progressPercent = totalLessons > 0 
-    ? Math.round((completedCount / totalLessons) * 100) 
+  const progressPercent = totalLessons > 0
+    ? Math.round((completedCount / totalLessons) * 100)
     : 0;
 
   return {

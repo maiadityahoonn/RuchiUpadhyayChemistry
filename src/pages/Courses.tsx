@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Grid, List, BookOpen, Loader2 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
@@ -16,11 +17,33 @@ const levels = ['All Levels', 'Beginner', 'Intermediate', 'Advanced'];
 const validCategories: CourseCategory[] = ['Class 10', 'Class 12', 'IIT-JEE', 'NEET', 'Engineering Chemistry', 'Environmental Science'];
 
 const Courses = () => {
+  const { category: urlCategory } = useParams<{ category?: string }>();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedLevel, setSelectedLevel] = useState('All Levels');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  
+
+  // Handle URL category param
+  useEffect(() => {
+    if (urlCategory) {
+      // Find the proper display name for the slug
+      const slugMap: Record<string, string> = {
+        'class-10': 'Class 10',
+        'class-12': 'Class 12',
+        'iit-jee': 'IIT-JEE',
+        'neet': 'NEET',
+        'engineering': 'Engineering Chemistry',
+        'environmental': 'Environmental Science'
+      };
+
+      const displayName = slugMap[urlCategory.toLowerCase()];
+      if (displayName) {
+        setSelectedCategory(displayName);
+      }
+    }
+  }, [urlCategory]);
+
   const { data: dbCourses, isLoading } = useCoursesList();
 
   // Transform database courses to Course type
@@ -38,9 +61,16 @@ const Courses = () => {
       duration: course.duration || '0 hours',
       lessons: course.lessons,
       level: course.level as 'Beginner' | 'Intermediate' | 'Advanced',
-      rating: 4.8,
-      students: 0,
+      rating: course.rating || 4.8,
+      students: course.students || 0,
       xpReward: course.xp_reward,
+      startDate: course.start_date || undefined,
+      endDate: course.end_date || undefined,
+      batchInfo: course.batch_info || undefined,
+      status: course.status || 'upcoming',
+      targetAudience: course.target_audience || undefined,
+      whatsappLink: course.whatsapp_link || undefined,
+      language: course.language || 'English',
     }));
 
   const filteredCourses = courses.filter((course) => {
@@ -76,7 +106,7 @@ const Courses = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="pt-20 pb-16">
         {/* Hero Section */}
         <section className="py-12 bg-gradient-to-br from-primary/10 via-background to-accent/10">
@@ -202,7 +232,7 @@ const Courses = () => {
                   No courses found
                 </h3>
                 <p className="text-muted-foreground mb-6">
-                  {courses.length === 0 
+                  {courses.length === 0
                     ? 'No courses have been added yet. Check back later!'
                     : 'Try adjusting your search or filters'}
                 </p>

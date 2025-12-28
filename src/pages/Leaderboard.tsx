@@ -8,7 +8,7 @@ import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Leaderboard = () => {
-  const { leaderboard, userRank, loading } = useLeaderboard();
+  const { leaderboard, userRank, loading, timeRange, setTimeRange } = useLeaderboard();
   const { profile } = useAuth();
   const topThree = leaderboard.slice(0, 3);
 
@@ -44,7 +44,9 @@ const Leaderboard = () => {
                   <div className="w-px h-6 bg-border" />
                   <div className="flex items-center gap-1 text-primary">
                     <Zap className="w-5 h-5" />
-                    <span className="font-semibold">{profile.xp.toLocaleString()} XP</span>
+                    <span className="font-semibold">
+                      {(timeRange === 'week' ? (profile.weekly_xp || 0) : timeRange === 'month' ? (profile.monthly_xp || 0) : profile.xp).toLocaleString()} XP
+                    </span>
                   </div>
                 </div>
               )}
@@ -178,15 +180,27 @@ const Leaderboard = () => {
             <section className="py-8 border-b border-border">
               <div className="container mx-auto px-4">
                 <div className="flex flex-wrap gap-2 items-center justify-center md:justify-start">
-                  <Button variant="default" size="sm">
+                  <Button
+                    variant={timeRange === 'all' ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setTimeRange('all')}
+                  >
                     <TrendingUp className="w-4 h-4 mr-2" />
                     All Time
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant={timeRange === 'week' ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setTimeRange('week')}
+                  >
                     <Calendar className="w-4 h-4 mr-2" />
                     This Week
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant={timeRange === 'month' ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setTimeRange('month')}
+                  >
                     <Calendar className="w-4 h-4 mr-2" />
                     This Month
                   </Button>
@@ -202,7 +216,7 @@ const Leaderboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <LeaderboardTable entries={leaderboard} />
+                  <LeaderboardTable entries={leaderboard.slice(3)} />
                 </motion.div>
               </div>
             </section>

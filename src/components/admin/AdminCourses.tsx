@@ -28,6 +28,16 @@ const AdminCourses = () => {
     lessons: 0,
     level: 'Beginner',
     xp_reward: 100,
+    rating: 4.5,
+    students: 0,
+    language: 'English',
+    start_date: null as string | null,
+    end_date: null as string | null,
+    batch_info: '',
+    status: 'upcoming',
+    target_audience: '',
+    features: '',
+    intro_video_url: '',
     is_active: true,
   });
 
@@ -56,6 +66,16 @@ const AdminCourses = () => {
         lessons: course.lessons,
         level: course.level,
         xp_reward: course.xp_reward,
+        rating: course.rating || 4.5,
+        students: course.students || 0,
+        language: course.language || 'English',
+        start_date: course.start_date,
+        end_date: course.end_date,
+        batch_info: course.batch_info || '',
+        status: course.status || 'upcoming',
+        target_audience: course.target_audience || '',
+        features: (course.features || []).join('\n'),
+        intro_video_url: course.intro_video_url || '',
         is_active: course.is_active,
       });
     } else {
@@ -72,6 +92,16 @@ const AdminCourses = () => {
         lessons: 0,
         level: 'Beginner',
         xp_reward: 100,
+        rating: 4.5,
+        students: 0,
+        language: 'English',
+        start_date: null,
+        end_date: null,
+        batch_info: '',
+        status: 'upcoming',
+        target_audience: '',
+        features: '',
+        intro_video_url: '',
         is_active: true,
       });
     }
@@ -80,13 +110,18 @@ const AdminCourses = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    const formattedData = {
+      ...formData,
+      features: formData.features.split('\n').filter(f => f.trim() !== '')
+    };
+
     if (editingCourse) {
-      await updateCourse.mutateAsync({ id: editingCourse.id, ...formData });
+      await updateCourse.mutateAsync({ id: editingCourse.id, ...formattedData });
     } else {
-      await createCourse.mutateAsync(formData);
+      await createCourse.mutateAsync(formattedData);
     }
-    
+
     setIsDialogOpen(false);
     setEditingCourse(null);
   };
@@ -110,7 +145,7 @@ const AdminCourses = () => {
             className="pl-10"
           />
         </div>
-        
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="gradient" onClick={() => handleOpenDialog()}>
@@ -134,7 +169,7 @@ const AdminCourses = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
                   <Select
@@ -259,6 +294,132 @@ const AdminCourses = () => {
                 </div>
               </div>
 
+              {/* New Enhanced Fields */}
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="rating">Rating (0-5)</Label>
+                  <Input
+                    id="rating"
+                    type="number"
+                    step="0.1"
+                    value={formData.rating}
+                    onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 0 })}
+                    min={0}
+                    max={5}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="students">Students Count</Label>
+                  <Input
+                    id="students"
+                    type="number"
+                    value={formData.students}
+                    onChange={(e) => setFormData({ ...formData, students: parseInt(e.target.value) || 0 })}
+                    min={0}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="language">Language</Label>
+                  <Select
+                    value={formData.language}
+                    onValueChange={(value) => setFormData({ ...formData, language: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="English">English</SelectItem>
+                      <SelectItem value="Hindi">Hindi</SelectItem>
+                      <SelectItem value="Hinglish">Hinglish</SelectItem>
+                      <SelectItem value="Tamil">Tamil</SelectItem>
+                      <SelectItem value="Telugu">Telugu</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.start_date || ''}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value || null })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={formData.end_date || ''}
+                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value || null })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="upcoming">Upcoming</SelectItem>
+                      <SelectItem value="ongoing">Ongoing</SelectItem>
+                      <SelectItem value="online">Online</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="batchInfo">Batch Info</Label>
+                  <Input
+                    id="batchInfo"
+                    value={formData.batch_info}
+                    onChange={(e) => setFormData({ ...formData, batch_info: e.target.value })}
+                    placeholder="e.g., New Batch Plans included"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="targetAudience">Target Audience</Label>
+                <Input
+                  id="targetAudience"
+                  value={formData.target_audience}
+                  onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
+                  placeholder="e.g., For Class 11th Science Students"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="features">Course Features</Label>
+                <Textarea
+                  id="features"
+                  value={formData.features}
+                  onChange={(e) => setFormData({ ...formData, features: e.target.value })}
+                  placeholder="Enter features (one per line)"
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">Each line will be a separate feature bullet point</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="introVideo">Intro Video ID (Youtube)</Label>
+                <Input
+                  id="introVideo"
+                  value={formData.intro_video_url}
+                  onChange={(e) => setFormData({ ...formData, intro_video_url: e.target.value })}
+                  placeholder="e.g., dQw4w9WgXcQ"
+                />
+              </div>
+
               <div className="flex items-center gap-3">
                 <Switch
                   checked={formData.is_active}
@@ -266,7 +427,7 @@ const AdminCourses = () => {
                 />
                 <Label>Active</Label>
               </div>
-              
+
               <div className="flex justify-end gap-3 pt-4 border-t border-border">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
@@ -340,9 +501,9 @@ const AdminCourses = () => {
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(course)}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="text-destructive"
                           onClick={() => handleDelete(course.id)}
                         >

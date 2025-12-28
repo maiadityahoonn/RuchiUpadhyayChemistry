@@ -65,7 +65,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRout
 
   // Redirect to dashboard if not admin (when admin is required)
   if (requireAdmin && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/profile" replace />;
   }
 
   return <>{children}</>;

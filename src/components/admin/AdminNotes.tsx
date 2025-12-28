@@ -21,6 +21,7 @@ const AdminNotes = () => {
     title: '',
     content: '',
     category: '',
+    price: 0,
     file_url: null as string | null,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,11 +45,12 @@ const AdminNotes = () => {
         title: note.title,
         content: note.content,
         category: note.category,
+        price: note.price,
         file_url: note.file_url,
       });
     } else {
       setEditingNote(null);
-      setFormData({ title: '', content: '', category: '', file_url: null });
+      setFormData({ title: '', content: '', category: '', price: 0, file_url: null });
     }
     setSelectedFile(null);
     setIsDialogOpen(true);
@@ -93,17 +95,18 @@ const AdminNotes = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     let fileUrl = formData.file_url;
-    
+
     if (selectedFile) {
       fileUrl = await uploadFile.mutateAsync(selectedFile);
     }
-    
+
     const noteData = {
       title: formData.title,
       content: formData.content,
       category: formData.category,
+      price: formData.price,
       file_url: fileUrl,
     };
 
@@ -112,9 +115,9 @@ const AdminNotes = () => {
     } else {
       await createNote.mutateAsync(noteData);
     }
-    
+
     setIsDialogOpen(false);
-    setFormData({ title: '', content: '', category: '', file_url: null });
+    setFormData({ title: '', content: '', category: '', price: 0, file_url: null });
     setSelectedFile(null);
     setEditingNote(null);
   };
@@ -143,7 +146,7 @@ const AdminNotes = () => {
             className="pl-10"
           />
         </div>
-        
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="gradient" onClick={() => handleOpenDialog()}>
@@ -166,7 +169,7 @@ const AdminNotes = () => {
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Select
@@ -186,6 +189,19 @@ const AdminNotes = () => {
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="price">Price (₹)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                  placeholder="Enter price (0 for free)"
+                  min={0}
+                  required
+                />
+              </div>
+
               {/* PDF Upload */}
               <div className="space-y-2">
                 <Label>PDF Document (Optional)</Label>
@@ -197,8 +213,8 @@ const AdminNotes = () => {
                         {selectedFile?.name || 'Uploaded PDF'}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {selectedFile 
-                          ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB` 
+                        {selectedFile
+                          ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`
                           : 'Click to view'}
                       </p>
                     </div>
@@ -226,11 +242,10 @@ const AdminNotes = () => {
                   </div>
                 ) : (
                   <div
-                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-                      isDragging 
-                        ? 'border-primary bg-primary/5' 
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${isDragging
+                        ? 'border-primary bg-primary/5'
                         : 'border-border hover:border-primary/50'
-                    }`}
+                      }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
@@ -253,7 +268,7 @@ const AdminNotes = () => {
                   </div>
                 )}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="content">Content / Description</Label>
                 <Textarea
@@ -265,7 +280,7 @@ const AdminNotes = () => {
                   required
                 />
               </div>
-              
+
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
@@ -287,6 +302,7 @@ const AdminNotes = () => {
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Title</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Category</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Price</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">File</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Created</th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Actions</th>
@@ -322,6 +338,9 @@ const AdminNotes = () => {
                       <Badge variant="secondary">{note.category}</Badge>
                     </td>
                     <td className="px-6 py-4">
+                      <span className="font-semibold text-primary">₹{note.price}</span>
+                    </td>
+                    <td className="px-6 py-4">
                       {note.file_url ? (
                         <Button
                           variant="ghost"
@@ -344,9 +363,9 @@ const AdminNotes = () => {
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(note)}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="text-destructive"
                           onClick={() => handleDelete(note)}
                         >

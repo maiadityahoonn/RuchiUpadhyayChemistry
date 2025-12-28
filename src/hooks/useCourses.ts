@@ -15,7 +15,7 @@ export interface EnrolledCourse {
 export const useCourses = () => {
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, addXP } = useAuth();
   const { toast } = useToast();
 
   const fetchEnrolledCourses = async () => {
@@ -42,6 +42,19 @@ export const useCourses = () => {
 
   useEffect(() => {
     fetchEnrolledCourses();
+  }, [user]);
+
+  // Refetch when page becomes visible (e.g., when navigating back from course details)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        console.log('🔄 Page visible - refetching course data');
+        fetchEnrolledCourses();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
 
   const enrollInCourse = async (courseId: string) => {
@@ -82,6 +95,27 @@ export const useCourses = () => {
       return { success: false };
     }
 
+    // Ensure a purchase record exists so it shows in "My Store"
+    // We check first to avoid duplicate records if CheckoutModal already handled it
+    const { data: existingPurchase } = await supabase
+      .from('purchases')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('course_id', courseId)
+      .maybeSingle();
+
+    if (!existingPurchase) {
+      await supabase.from('purchases').insert({
+        user_id: user.id,
+        course_id: courseId,
+        amount: 0, // Fallback for free/direct enrollment
+        status: 'completed',
+        order_id: `ENR_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        payment_id: 'direct_enroll',
+        paid_at: new Date().toISOString()
+      });
+    }
+
     toast({
       title: 'Enrolled successfully!',
       description: 'You can now access this course.',
@@ -94,19 +128,45 @@ export const useCourses = () => {
   const updateProgress = async (courseId: string, progress: number) => {
     if (!user) return;
 
+    console.log('🔄 Updating progress in database:', { courseId, progress, userId: user.id });
+
+    // 1. Get current status BEFORE update
+    const { data: currentStatus } = await supabase
+      .from('user_courses')
+      .select('progress, completed_at')
+      .eq('user_id', user.id)
+      .eq('course_id', courseId)
+      .maybeSingle();
+
+    const isNowCompleting = progress >= 100 && !currentStatus?.completed_at;
+
+    console.log('🏁 Completion Check:', {
+      currentProgress: currentStatus?.progress,
+      alreadyCompleted: !!currentStatus?.completed_at,
+      newProgress: progress,
+      isNowCompleting
+    });
+
+    // 2. Perform the update/upsert
     const { error } = await supabase
       .from('user_courses')
-      .update({ 
-        progress,
-        completed_at: progress >= 100 ? new Date().toISOString() : null,
-      })
-      .eq('user_id', user.id)
-      .eq('course_id', courseId);
+      .upsert({
+        user_id: user.id,
+        course_id: courseId,
+        progress: Math.min(progress, 100),
+        completed_at: (progress >= 100) ? (currentStatus?.completed_at || new Date().toISOString()) : currentStatus?.completed_at,
+      }, {
+        onConflict: 'user_id,course_id'
+      });
 
     if (error) {
-      console.error('Error updating progress:', error);
+      console.error('❌ Error updating progress:', error);
       return;
     }
+
+    // 3. XP rewards and notifications are now handled automatically by 
+    // the database trigger 'on_course_progress_update'.
+    // No manual awarding needed here.
 
     await fetchEnrolledCourses();
   };
